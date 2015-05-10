@@ -1,0 +1,14 @@
+#ifndef RUSTC_AST_PRINT_H_
+#define RUSTC_AST_PRINT_H_
+
+#include <glib.h>
+#include "ast.h"
+
+void crate_print(const GList* items);
+void item_print_pretty(const struct item*);
+void assem_crate(const GList* items);
+
+/* Print out type in Rust syntax style. */
+void type_print_pretty(const struct type*);
+
+#endif
