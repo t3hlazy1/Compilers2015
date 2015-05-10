@@ -430,12 +430,10 @@ int main(int argc, char** argv) {
             check_main(genv);
 
             annotate_crate(crate, genv);
-
-        
-
-        
-            assem_crate(crate);      
-            //crate_print(crate);
+            // if (crate->type != ERROR)
+              llvm_crate(crate);     
+            // else
+            //   crate_print(crate);
       }
 
       crate_destroy(crate);

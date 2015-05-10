@@ -21,10 +21,10 @@ static void exp_print(const struct exp*);
 static void pair_print(const struct pair*);
 static void type_print(const struct type*);
 
-static void assem_stmt(const struct stmt* stmt);
-static void assem_binary(const struct exp* exp, int leg);
-void assem_item(const struct item*);
-void assem_exp(const struct exp*);
+static void llvm_stmt(const struct stmt* stmt);
+static void llvm_binary(const struct exp* exp, int leg);
+void llvm_item(const struct item*);
+void llvm_exp(const struct exp*);
 
 #define INDENT "  "
 static int indent_level;
@@ -266,6 +266,7 @@ static const char* op_to_str(const char* op, bool unary, bool mut) {
       if (!strcmp(op, ">=")) return "geq";
       assert(false);
 }
+
 static void exp_print(const struct exp* exp) {
       if (!exp) return;
 
@@ -388,7 +389,7 @@ static void exp_print(const struct exp* exp) {
                   print_rparen();
                   break;
             case EXP_BINARY:
-                  assem_binary(exp, 0);
+                  llvm_binary(exp, 0);
                   break;
                   print_typed_head(op_to_str(exp->binary.op, false, false), exp->type);
                   //exp_print(exp->binary.left);
@@ -591,69 +592,39 @@ void type_print_pretty(const struct type* type) {
       }
 }
 
-/* ASSEMBLY */
+/* LLVM */
 
-void assem_crate(const GList* items){
-  printf("  .intel_syntax noprefix\n  .text\n.globl main\n  .type main, @function\n");
-  
-  g_list_foreach((GList*)items, (GFunc)assem_item, NULL);
+void llvm_crate(const GList* items){
+  g_list_foreach((GList*)items, (GFunc)llvm_item, NULL);
 }
 
-void assem_item(const struct item* item){
-  //int i = 0;
-  //GList* p;
+void llvm_item(const struct item* item){
+  GList* p;
   switch (item->kind){
     case ITEM_FN_DEF:{
       
-      // Print function name
-      printf("%s", symbol_to_str(item->id));
+      // NoUnwind
+      printf("; Function Attrs: nounwind\n");
       
-      /*
+      // Print function name
+      printf("define %s @%s(", llvm_get_type(item->type), symbol_to_str(item->id));
+      
       // Loop through all params
       for(p = item->fn_def.type->params; p; p = p->next){
-        if (i == 0){
-          printf("(");
-          i++;
-        }
         struct pair* param = p->data;
-        switch (param->param.type->kind){
-          case TYPE_INVALID:
-          case TYPE_ERROR:
-          case TYPE_OK:
-          case TYPE_UNIT:
-          case TYPE_I32:
-            printf("int");
-            break;
-          case TYPE_U8:
-            printf("char");
-            break;
-          case TYPE_BOOL:
-            printf("bool");
-            break;
-          case TYPE_DIV:
-          case TYPE_ID:
-          case TYPE_REF:
-          case TYPE_MUT:
-          case TYPE_SLICE:
-          case TYPE_ARRAY:
-          case TYPE_BOX:
-          case TYPE_FN:
-            break;
-        }
+        
+        printf("%s %%%s", llvm_get_type(param->param.type), "PUT PARAM ID HERE"); // FIX
+        
         if (p->next)
           printf(", ");
-        else
-          printf(")");
       }
-      */
-      printf(":\n  push rbp\n  mov rbp, rsp\n");
       
-      assem_exp(item->fn_def.block);
+      printf(") #0 {\n");
+      printf("entry:\n");
       
-      if (item->fn_def.type->kind == TYPE_FN)
-        printf("  mov eax, 0\n");
-      printf("  leave\n  ret\n");
+      llvm_exp(item->fn_def.block);
       
+      printf("}\n\n");
       break;
     }
 
@@ -667,7 +638,40 @@ void assem_item(const struct item* item){
   
 }
 
-void assem_exp(const struct exp* exp){
+const char* llvm_get_type(const struct type* type){
+  return "<type>";
+  
+  switch (type->kind){
+    case TYPE_INVALID:
+    case TYPE_ERROR:
+    case TYPE_OK:
+    case TYPE_UNIT:
+    case TYPE_I32:
+      printf("i32");
+      break;
+    case TYPE_U8:
+      printf("i8"); // ??
+      break;
+    case TYPE_BOOL:
+      printf("bool");
+      break;
+    case TYPE_DIV:
+    case TYPE_ID:
+    case TYPE_REF:
+    case TYPE_MUT:
+    case TYPE_SLICE:
+    case TYPE_ARRAY:
+    case TYPE_BOX:
+    case TYPE_FN:
+      break;
+  }
+}
+
+void llvm_print_type(const struct type* type){
+  printf("%s", llvm_get_type(type));
+}
+
+void llvm_exp(const struct exp* exp){
   if (!exp) return;
   
   switch (exp->kind) {
@@ -690,12 +694,12 @@ void assem_exp(const struct exp* exp){
     case EXP_WHILE:
     case EXP_LOOP:
     case EXP_BLOCK:
-      g_list_foreach(exp->block.stmts, (GFunc)assem_stmt, NULL);
-      assem_exp(exp->block.exp);
+      g_list_foreach(exp->block.stmts, (GFunc)llvm_stmt, NULL);
+      llvm_exp(exp->block.exp);
       break;
     case EXP_UNARY:
     case EXP_BINARY:
-      assem_binary(exp, 0);
+      llvm_binary(exp, 0);
       break;
   }
   
@@ -703,7 +707,7 @@ void assem_exp(const struct exp* exp){
 
 // LEG: 0 = left
 //      1 = right
-static void assem_binary(const struct exp* exp, int leg){
+static void llvm_binary(const struct exp* exp, int leg){
   
   char* r0 = "eax";
   char* r1 = "edx";
@@ -715,12 +719,12 @@ static void assem_binary(const struct exp* exp, int leg){
   if (exp->binary.left->kind == EXP_I32)
     printf("  mov %s, %d\n", r0, exp->binary.left->num);
   else
-    assem_binary(exp->binary.left, 0);
+    llvm_binary(exp->binary.left, 0);
     
   if (exp->binary.right->kind == EXP_I32)
     printf("  mov %s, %d\n", r1, exp->binary.right->num);
   else
-    assem_binary(exp->binary.right, 1);
+    llvm_binary(exp->binary.right, 1);
   
   printf("  ");
   if (!strcmp(exp->binary.op, "+")) printf("add");
@@ -731,17 +735,17 @@ static void assem_binary(const struct exp* exp, int leg){
   
 }
 
-static void assem_stmt(const struct stmt* stmt){
+static void llvm_stmt(const struct stmt* stmt){
 
   switch (stmt->kind) {
     case STMT_LET:
-      assem_exp(stmt->let.exp);
+      llvm_exp(stmt->let.exp);
       break;
     case STMT_RETURN:
-      assem_exp(stmt->exp);
+      llvm_exp(stmt->exp);
       break;
     case STMT_EXP:
-      assem_exp(stmt->exp);
+      llvm_exp(stmt->exp);
       break;
   }
   
