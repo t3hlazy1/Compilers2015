@@ -612,7 +612,7 @@ void llvm_item(const struct item* item){
       printf("; Function Attrs: nounwind\n");
       
       // Print function name
-      printf("define %s @%s(", llvm_get_type(item->type), symbol_to_str(item->id));
+      printf("define %s @%s(", llvm_get_type(item->fn_def.type->type), symbol_to_str(item->id));
       
       // Loop through all params
       for(p = item->fn_def.type->params; p; p = p->next){
@@ -653,13 +653,16 @@ const char* llvm_get_type(const struct type* type){
   
   switch (type->kind){
     case TYPE_INVALID:
+      return "inv";
       break;
     case TYPE_ERROR:
+      return "err";
       break;
     case TYPE_OK:
+      return "ok";
       break;
     case TYPE_UNIT:
-      return "void";
+      return "i32";
     case TYPE_I32:
       return "i32";
     case TYPE_U8:
@@ -667,20 +670,28 @@ const char* llvm_get_type(const struct type* type){
     case TYPE_BOOL:
       return "bool";
     case TYPE_DIV:
+      return "div";
       break;
     case TYPE_ID:
+      return "id";
       break;
     case TYPE_REF:
+      return "ref";
       break;
     case TYPE_MUT:
+      return "mut";
       break;
     case TYPE_SLICE:
+      return "slice";
       break;
     case TYPE_ARRAY:
+      return "[]";
       break;
     case TYPE_BOX:
+      return "<>";
       break;
     case TYPE_FN:
+      return "fn";
       break;
   }
   
@@ -786,14 +797,21 @@ static void llvm_binary(const struct exp* exp, int leg){
 
 static void llvm_stmt(const struct stmt* stmt){
   last_register++;
+  struct type* t;
   switch (stmt->kind) {
     case STMT_LET:
-      printf("%%%s = alloca %s, align 4\n", symbol_to_str(stmt->let.pat->bind.id), llvm_get_type(stmt->let.type));
+      if (stmt->let.type)
+        t = stmt->let.type;
+      else
+        t = stmt->let.exp->type;
       
+        printf("%%%s = alloca %s, align 4\n", symbol_to_str(stmt->let.pat->bind.id), llvm_get_type(t));
+      
+        
       if (stmt->let.exp){
         
         llvm_exp(stmt->let.exp);
-        printf("store %s %%r%d, %s* %%%s, align 4\n", llvm_get_type(stmt->let.type), last_register, llvm_get_type(stmt->let.type), symbol_to_str(stmt->let.pat->bind.id));
+        printf("store %s %%r%d, %s* %%%s, align 4\n", llvm_get_type(t), last_register, llvm_get_type(t), symbol_to_str(stmt->let.pat->bind.id));
         
       }
       
