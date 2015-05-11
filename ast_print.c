@@ -25,6 +25,8 @@ static void llvm_stmt(const struct stmt* stmt);
 static void llvm_binary(const struct exp* exp, int leg);
 void llvm_item(const struct item*);
 void llvm_exp(const struct exp*);
+const char* llvm_get_type(const struct type* type);
+void llvm_print_type(const struct type* type);
 
 #define INDENT "  "
 static int indent_level;
@@ -629,10 +631,8 @@ void llvm_item(const struct item* item){
     }
 
     case ITEM_ENUM_DEF:
-      //item->type = type_ok(); // nothing to check.
       break;
     case ITEM_STRUCT_DEF:
-      //item->type = type_ok(); // nothing to check.
       break;
   }
   
