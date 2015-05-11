@@ -615,7 +615,7 @@ void llvm_item(const struct item* item){
       for(p = item->fn_def.type->params; p; p = p->next){
         struct pair* param = p->data;
         
-        printf("%s %%%s", llvm_get_type(param->param.type), "PUT PARAM ID HERE"); // FIX
+        printf("%s %%%s", llvm_get_type(param->param.type), pair->param.pat->str); // FIX
         
         if (p->next)
           printf(", ");
@@ -624,6 +624,8 @@ void llvm_item(const struct item* item){
       printf(") #0 {\n");
       printf("entry:\n");
       
+      //printf("%retval = alloca i32, align 4");
+
       llvm_exp(item->fn_def.block);
       
       printf("}\n\n");
@@ -633,6 +635,7 @@ void llvm_item(const struct item* item){
     case ITEM_ENUM_DEF:
       break;
     case ITEM_STRUCT_DEF:
+      printf("\%struct.%s = type { %s, %s }", "id", "type1", "type2");
       break;
   }
   
@@ -684,6 +687,13 @@ void llvm_exp(const struct exp* exp){
     case EXP_ID:
     case EXP_ENUM:
     case EXP_STRUCT:
+
+      //where struct definition lines would be called
+      //same as struct member accessing lines? 
+
+      //printf("\%t = alloca \%struct.%s, align 4");
+
+
     case EXP_ARRAY:
     case EXP_LOOKUP:
     case EXP_INDEX:
