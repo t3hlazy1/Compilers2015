@@ -640,9 +640,9 @@ void llvm_item(const struct item* item){
     case ITEM_STRUCT_DEF:
       //item->
       printf("%%struct.%s = type {", symbol_to_str(item->id));
-    
+
       // Print comma separated type list
-    
+      
       printf("}\n\n");
       break;
   }
