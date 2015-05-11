@@ -615,7 +615,7 @@ void llvm_item(const struct item* item){
       for(p = item->fn_def.type->params; p; p = p->next){
         struct pair* param = p->data;
         
-        printf("%s %%%s", llvm_get_type(param->param.type), pair->param.pat->str); // FIX
+        printf("%s %%%s", llvm_get_type(param->param.type), symbol_to_str(param->param.pat->bind.id));  // TODO (POSSIBLY) : Make sure there is no clash between ids and other registers. i.e.: variables called "r" or "retval" might cause problems
         
         if (p->next)
           printf(", ");
@@ -624,7 +624,7 @@ void llvm_item(const struct item* item){
       printf(") #0 {\n");
       printf("entry:\n");
       
-      //printf("%retval = alloca i32, align 4");
+      //printf("%retval = alloca i32, align 4");  // ???: There isn't a retval register for every function
 
       llvm_exp(item->fn_def.block);
       
@@ -635,7 +635,12 @@ void llvm_item(const struct item* item){
     case ITEM_ENUM_DEF:
       break;
     case ITEM_STRUCT_DEF:
-      printf("\%struct.%s = type { %s, %s }", "id", "type1", "type2");
+      //item->
+      printf("%%struct.%s = type {", symbol_to_str(item->id));
+    
+      // Print comma separated type list
+    
+      printf("}\n\n");
       break;
   }
   
@@ -691,7 +696,7 @@ void llvm_exp(const struct exp* exp){
       //where struct definition lines would be called
       //same as struct member accessing lines? 
 
-      //printf("\%t = alloca \%struct.%s, align 4");
+      //printf("%%t = alloca %%struct.%s, align 4", "<id>");
 
 
     case EXP_ARRAY:
