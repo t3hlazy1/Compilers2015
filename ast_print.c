@@ -393,9 +393,9 @@ static void exp_print(const struct exp* exp) {
                   print_rparen();
                   break;
             case EXP_BINARY:
-                  llvm_binary(exp, 0);
-                  break;
+
                   print_typed_head(op_to_str(exp->binary.op, false, false), exp->type);
+                  break;
                   //exp_print(exp->binary.left);
                   //exp_print(exp->binary.right);
                   print_rparen();
@@ -650,32 +650,41 @@ void llvm_item(const struct item* item){
 }
 
 const char* llvm_get_type(const struct type* type){
-  return "<type>";
   
   switch (type->kind){
     case TYPE_INVALID:
+      break;
     case TYPE_ERROR:
+      break;
     case TYPE_OK:
+      break;
     case TYPE_UNIT:
+      return "void";
     case TYPE_I32:
-      printf("i32");
-      break;
+      return "i32";
     case TYPE_U8:
-      printf("i8"); // ??
-      break;
+      return "i8";
     case TYPE_BOOL:
-      printf("bool");
-      break;
+      return "bool";
     case TYPE_DIV:
+      break;
     case TYPE_ID:
+      break;
     case TYPE_REF:
+      break;
     case TYPE_MUT:
+      break;
     case TYPE_SLICE:
+      break;
     case TYPE_ARRAY:
+      break;
     case TYPE_BOX:
+      break;
     case TYPE_FN:
       break;
   }
+  
+  return "<TYPE>";
 }
 
 void llvm_print_type(const struct type* type){
@@ -738,8 +747,6 @@ void llvm_exp(const struct exp* exp){
     case EXP_UNARY:
       break;
     case EXP_BINARY:
-      llvm_binary(exp, 0);
-      return;
       break;
   }
   
