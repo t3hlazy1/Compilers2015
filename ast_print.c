@@ -28,6 +28,8 @@ void llvm_exp(const struct exp*);
 const char* llvm_get_type(const struct type* type);
 void llvm_print_type(const struct type* type);
 
+static int last_register;
+
 #define INDENT "  "
 static int indent_level;
 static void print_indent(void) {
@@ -601,6 +603,7 @@ void llvm_crate(const GList* items){
 }
 
 void llvm_item(const struct item* item){
+  last_register = 0;
   GList* p;
   switch (item->kind){
     case ITEM_FN_DEF:{
@@ -681,42 +684,66 @@ void llvm_print_type(const struct type* type){
 
 void llvm_exp(const struct exp* exp){
   if (!exp) return;
+  last_register++;
   
   switch (exp->kind) {
     case EXP_UNIT:
+      break;
     case EXP_TRUE:
+      break;
     case EXP_FALSE:
+      break;
     case EXP_I32:
+      break;
     case EXP_U8:
+      break;
     case EXP_STR:
+      break;
     case EXP_ID:
+      break;
     case EXP_ENUM:
+      break;
     case EXP_STRUCT:
+      break;
 
       //where struct definition lines would be called
-      //same as struct member accessing lines? 
+      //same as struct member accessing lines?
 
       //printf("%%t = alloca %%struct.%s, align 4", "<id>");
 
 
     case EXP_ARRAY:
+      break;
     case EXP_LOOKUP:
+      break;
     case EXP_INDEX:
+      break;
     case EXP_FN_CALL:
+      break;
     case EXP_BOX_NEW:
+      break;
     case EXP_MATCH:
+      break;
     case EXP_IF:
+      break;
     case EXP_WHILE:
+      break;
     case EXP_LOOP:
+      break;
     case EXP_BLOCK:
       g_list_foreach(exp->block.stmts, (GFunc)llvm_stmt, NULL);
       llvm_exp(exp->block.exp);
+      return;
       break;
     case EXP_UNARY:
+      break;
     case EXP_BINARY:
       llvm_binary(exp, 0);
+      return;
       break;
   }
+  
+  printf("%%r%d = ...\n", last_register);
   
 }
 
@@ -751,10 +778,18 @@ static void llvm_binary(const struct exp* exp, int leg){
 }
 
 static void llvm_stmt(const struct stmt* stmt){
-
+  last_register++;
   switch (stmt->kind) {
     case STMT_LET:
-      llvm_exp(stmt->let.exp);
+      printf("%%%s = alloca %s, align 4\n", symbol_to_str(stmt->let.pat->bind.id), llvm_get_type(stmt->let.type));
+      
+      if (stmt->let.exp){
+        
+        llvm_exp(stmt->let.exp);
+        printf("store %s %%r%d, %s* %%%s, align 4\n", llvm_get_type(stmt->let.type), last_register, llvm_get_type(stmt->let.type), symbol_to_str(stmt->let.pat->bind.id));
+        
+      }
+      
       break;
     case STMT_RETURN:
       llvm_exp(stmt->exp);
