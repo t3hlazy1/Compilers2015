@@ -689,7 +689,7 @@ const char* llvm_get_type(const struct type* type){
       return "ref";
       break;
     case TYPE_MUT:
-      return "mut";
+      return llvm_get_type(type->type);
       break;
     case TYPE_SLICE:
       return "slice";
@@ -743,7 +743,9 @@ void llvm_exp(const struct exp* exp){
       return;
       break;
     case EXP_ID:
-      printf("%%r%d = <ID>\n", last_register);
+    //%0 = load i32* %x, align 4
+      printf("%%r%d = load %s* %%%s, align 4\n", last_register, llvm_get_type(exp->type), symbol_to_str(exp->id));
+    
       return;
       break;
     case EXP_ENUM:
@@ -876,7 +878,7 @@ void llvm_exp(const struct exp* exp){
                !strcmp(exp->binary.op, "*") ||
                !strcmp(exp->binary.op, "/") ||
                !strcmp(exp->binary.op, "%"))  {
-        printf("Do binary stuff\n");
+        
         // Do left expression
         if (exp->binary.left->kind != EXP_I32){
           llvm_exp(exp->binary.left);
@@ -904,7 +906,6 @@ void llvm_exp(const struct exp* exp){
         else
           printf("%%r%d", last_register - 1); 
         printf("\n");
-        break;
       }
       // Boolean
       else{
