@@ -719,22 +719,40 @@ void llvm_exp(const struct exp* exp){
   
   switch (exp->kind) {
     case EXP_UNIT:
+      printf("%%r%d = <UNIT>\n", last_register);
+      return;
       break;
     case EXP_TRUE:
+      printf("%%r%d = <TRUE>\n", last_register);
+      return;
       break;
     case EXP_FALSE:
+      printf("%%r%d = <FALSE>\n", last_register);
+      return;
       break;
     case EXP_I32:
+      printf("%%r%d = <I32>\n", last_register);
+      return;
       break;
     case EXP_U8:
+      printf("%%r%d = <U8>\n", last_register);
+      return;
       break;
     case EXP_STR:
+      printf("%%r%d = <STR>\n", last_register);
+      return;
       break;
     case EXP_ID:
+      printf("%%r%d = <ID>\n", last_register);
+      return;
       break;
     case EXP_ENUM:
+      printf("%%r%d = <ENUM>\n", last_register);
+      return;
       break;
     case EXP_STRUCT:
+      printf("%%r%d = <STRUCT>\n", last_register);
+      return;
       break;
 
       //where struct definition lines would be called
@@ -744,12 +762,20 @@ void llvm_exp(const struct exp* exp){
 
 
     case EXP_ARRAY:
+      printf("%%r%d = <ARRAY>\n", last_register);
+      return;
       break;
     case EXP_LOOKUP:
+      printf("%%r%d = <LOOKUP>\n", last_register);
+      return;
       break;
     case EXP_INDEX:
+      printf("%%r%d = <INDEX>\n", last_register);
+      return;
       break;
     case EXP_FN_CALL:
+      printf("%%r%d = <FN CALL>\n", last_register);
+      return;
       //printf("%%call%d = call %s @%s(", last_register, llvm_print_type(exp->type), symbol_to_str(exp->fn_call.id));
       /* FIX
       //get parameter list of function name
@@ -766,17 +792,27 @@ void llvm_exp(const struct exp* exp){
       }
       */
       printf(")");
-
+      return;
       break;
     case EXP_BOX_NEW:
+      printf("%%r%d = <BOX NEW>\n", last_register);
+      return;
       break;
     case EXP_MATCH:
+      printf("%%r%d = <MATCH>\n", last_register);
+      return;
       break;
     case EXP_IF:
+      printf("%%r%d = <IF>\n", last_register);
+      return;
       break;
     case EXP_WHILE:
+      printf("%%r%d = <WHILE>\n", last_register);
+      return;
       break;
     case EXP_LOOP:
+      printf("%%r%d = <LOOP>\n", last_register);
+      return;
       break;
     case EXP_BLOCK:
       g_list_foreach(exp->block.stmts, (GFunc)llvm_stmt, NULL);
@@ -784,67 +820,97 @@ void llvm_exp(const struct exp* exp){
       return;
       break;
     case EXP_UNARY:
-      if (!strcmp(exp->unary.op, "=")){
+      llvm_exp(exp->unary.exp);
+      return;
+      break;
+    case EXP_BINARY:
+    
+      // Plain assignment
+      if (!strcmp(exp->binary.op, "=")){
         
-        if (exp->unary.exp->kind != EXP_I32){
-          llvm_exp(exp->unary.exp);
+        // Register
+        if (exp->binary.right->kind != EXP_I32){
+          llvm_exp(exp->binary.right);
+          printf("store %s %%r%d, %s* %%%s, align 4\n", llvm_get_type(exp->binary.right->type), last_register, llvm_get_type(exp->binary.right->type), symbol_to_str(exp->binary.left->id));   
         }
+        // Plain number
         else{
-          printf("store %s %d, %s* %%%s, align 4", llvm_get_type(exp->unary.exp->type), exp->unary.exp->num, llvm_get_type(exp->unary.exp->type), symbol_to_str(exp->unary.exp->id));
-          break;
+          printf("store i32 %d, i32* %%%s, align 4\n", exp->binary.right->num, symbol_to_str(exp->binary.left->id));   
         }
+        // TODO: Add string support here
+        // store i8* getelementptr inbounds ([5 x i8]* @.str, i32 0, i32 0), i8** %x, align 4
+        // template:
+        // store i8* getelementptr inbounds ([<length> x i8]* <string reference>, i32 0, i32 0), i8** %<var id>, align 4
+        
       }
-      else{
+      // Combo assignment
+      else if (!strcmp(exp->binary.op, "+=") ||
+          !strcmp(exp->binary.op, "-=") ||
+          !strcmp(exp->binary.op, "*=") ||
+          !strcmp(exp->binary.op, "/=") ||
+          !strcmp(exp->binary.op, "%="))  {
+        
+        llvm_exp(exp->binary.left);
+        l = last_register;
+        
+        if (exp->binary.right->kind != EXP_I32){
+          llvm_exp(exp->binary.right);
+        }
+        last_register++;
 
-        if (exp->unary.exp->kind != EXP_I32){
-          llvm_exp(exp->unary.exp);
+        // Print beginning
+        printf("%%r%d = %s i32 %%r%d, ", last_register, llvm_op_to_str(exp->binary.op), l);
+
+        // Print end
+        if (exp->binary.right->kind == EXP_I32)
+          printf("%d", exp->binary.right->num);
+        else
+          printf("%%r%d", last_register - 1);
+
+        printf("\nstore i32 %%r%d, i32* %%%s, align 4\n", last_register, symbol_to_str(exp->binary.left->id));
+        
+      } 
+      // Arithmetic
+      else if (!strcmp(exp->binary.op, "+") ||
+               !strcmp(exp->binary.op, "-") ||
+               !strcmp(exp->binary.op, "*") ||
+               !strcmp(exp->binary.op, "/") ||
+               !strcmp(exp->binary.op, "%"))  {
+        printf("Do binary stuff\n");
+        // Do left expression
+        if (exp->binary.left->kind != EXP_I32){
+          llvm_exp(exp->binary.left);
+          l = last_register;
+        }
+
+        // Do right expression
+        if (exp->binary.right->kind != EXP_I32){
+          llvm_exp(exp->binary.right);
           last_register++;
         }
 
         // Print beginning
-        printf("%%r%d = %s %s %%%s ", last_register, llvm_op_to_str(exp->unary.op), llvm_get_type(exp->unary.exp->type), symbol_to_str(exp->unary.exp->id));
-        
-        // Print end
-        if (exp->unary.exp->kind == EXP_I32)
-          printf("%d", exp->unary.exp->num);
+        printf("%%r%d = %s i32 ", last_register, llvm_op_to_str(exp->binary.op));
+
+        // Print left
+        if (exp->binary.left->kind == EXP_I32)
+          printf("%d, ", exp->binary.left->num);
         else
-          printf("%%r%d", last_register - 1);
-        
+          printf("%%r%d, ", l);
+
+        // Print right
+        if (exp->binary.right->kind == EXP_I32)
+          printf("%d", exp->binary.right->num);
+        else
+          printf("%%r%d", last_register - 1); 
         printf("\n");
+        break;
       }
-    
-      printf("store %s %%r%d, %s* %%%s, align 4", llvm_get_type(exp->unary.exp->type), last_register, llvm_get_type(exp->unary.exp->type), symbol_to_str(exp->unary.exp->id));
-      break;
-    case EXP_BINARY:
-      printf("%s", exp->binary.op);
-      // Do left expression
-      if (exp->binary.left->kind != EXP_I32){
-        llvm_exp(exp->binary.left);
-        l = last_register;
+      // Boolean
+      else{
+        printf("Do boolean stuff\n");
       }
-    
-      // Do right expression
-      if (exp->binary.right->kind != EXP_I32){
-        llvm_exp(exp->binary.right);
-        last_register++;
-      }
-    
-      // Print beginning
-      printf("%%r%d = %s i32 ", last_register, llvm_op_to_str(exp->binary.op));
-      
-      // Print left
-      if (exp->binary.left->kind == EXP_I32)
-        printf("%d, ", exp->binary.left->num);
-      else
-        printf("%%r%d, ", l);
-    
-      // Print right
-      if (exp->binary.right->kind == EXP_I32)
-        printf("%d", exp->binary.right->num);
-      else
-        printf("%%r%d", last_register - 1); 
-      
-      break;
+      return;
   }
   
   printf("%%r%d = ...\n", last_register);
