@@ -644,7 +644,17 @@ void llvm_item(const struct item* item){
       //item->
       printf("%%struct.%s = type {", symbol_to_str(item->id));
 
-      // Print comma separated type list
+            for(p = item->struct_def->fields; p; p = p->next){
+            struct pair* param = p->data; 
+
+            //print statement
+
+            printf("%s", llvm_get_type(param->param.type));
+
+            if(p->next){
+                  printf(", ");
+            }
+      }
       
       printf("}\n\n");
       break;
@@ -747,6 +757,24 @@ void llvm_exp(const struct exp* exp){
     case EXP_INDEX:
       break;
     case EXP_FN_CALL:
+
+    last_register++;
+
+      printf("%%call%d = call %s @%s(", last_register, llvm_print_type(exp->type), symbol_to_str(exp->fn_call.id));
+            //get parameter list of function name
+            for(p = item->fn_call->exps; p; p = p->next){
+            struct pair* param = p->data; 
+
+            //print statement
+
+            printf("%s %s", llvm_get_type(param->param.type), symbol_to_str(param->pat.bind));
+
+            if(p->next){
+                  printf(", ");
+            }
+            
+      printf(")");
+
       break;
     case EXP_BOX_NEW:
       break;
