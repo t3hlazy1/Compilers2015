@@ -908,8 +908,39 @@ void llvm_exp(const struct exp* exp){
         printf("\n");
       }
       // Boolean
+      // TODO: Possibly merge with arith
       else{
-        printf("Do boolean stuff\n");
+        // %0 = load i32* %x, align 4  llvm_exp(left)
+        // %cmp = icmp sgt i32 %0, 2   
+        
+        // Do left expression
+        if (exp->binary.left->kind != EXP_I32){
+          llvm_exp(exp->binary.left);
+          l = last_register;
+        }
+
+        // Do right expression
+        if (exp->binary.right->kind != EXP_I32){
+          llvm_exp(exp->binary.right);
+          last_register++;
+        }
+        
+        // Print beginning
+        printf("%%cmp%d = icmp %s %s ", last_register, llvm_op_to_str(exp->binary.op), llvm_get_type(exp->binary.left->type));
+        
+        // Print left
+        if (exp->binary.left->kind == EXP_I32)
+          printf("%d, ", exp->binary.left->num);
+        else
+          printf("%%r%d, ", l);
+        
+        // Print right
+        if (exp->binary.right->kind == EXP_I32)
+          printf("%d", exp->binary.right->num);
+        else
+          printf("%%r%d", last_register - 1); 
+        printf("\n");
+        
       }
       return;
   }
