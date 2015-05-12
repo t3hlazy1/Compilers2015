@@ -395,38 +395,10 @@ static void exp_print(const struct exp* exp) {
                   print_rparen();
                   break;
             case EXP_BINARY:
-
                   print_typed_head(op_to_str(exp->binary.op, false, false), exp->type);
-                  break;
-                  //exp_print(exp->binary.left);
-                  //exp_print(exp->binary.right);
-                  print_rparen();
-                    
-                  if (exp->binary.left->kind == EXP_I32)
-                    printf("\nmov eax, %d\n", exp->binary.left->num);
-                  if (exp->binary.left->kind == EXP_I32)
-                    printf("\nmov edx, %d\n", exp->binary.right->num);
-                    
                   exp_print(exp->binary.left);
                   exp_print(exp->binary.right);
-                  printf("\n");
-                  if (!strcmp(exp->binary.op, "+")) printf("add");
-                  if (!strcmp(exp->binary.op, "-")) printf("sub");
-                  if (!strcmp(exp->binary.op, "*")) printf("imul");
-                  if (!strcmp(exp->binary.op, "/")) printf("idiv");
-                  printf(" eax, edx\n");
-        
-                  // DO LEFT -> SETS eax to its value
-                  // DO RIGHT -> SETS edx to its value
-                  // op eax, edx
-                    
-                  // mov eax, left
-                  // mov edx, right
-                  // op eax, edx
-                    
-                    
-                    
-                  
+                  print_rparen();
                   break;
       }
 }
@@ -663,7 +635,28 @@ void llvm_item(const struct item* item){
 }
 
 const char* llvm_op_to_str(const char* op){
-  return "op"; 
+  //return "op"; 
+  //if (!strcmp(op, "&")) return mut? "addr-of-mut" : "addr-of";
+  if (!strcmp(op, "!")) return "not";
+  if (!strcmp(op, "+")) return "add";
+  //if (!strcmp(op, "-")) return unary? "neg" : "sub";
+  //if (!strcmp(op, "*")) return unary? "deref" : "mul";
+  if (!strcmp(op, "/")) return "div";
+  if (!strcmp(op, "%")) return "rem";
+  if (!strcmp(op, "=")) return "assign";
+  if (!strcmp(op, "+=")) return "assign-add";
+  if (!strcmp(op, "-=")) return "assign-sub";
+  if (!strcmp(op, "*=")) return "assign-mul";
+  if (!strcmp(op, "/=")) return "assign-div";
+  if (!strcmp(op, "%=")) return "assign-rem";
+  if (!strcmp(op, "&&")) return "and";
+  if (!strcmp(op, "||")) return "or";
+  if (!strcmp(op, "!=")) return "neq";
+  if (!strcmp(op, "==")) return "eq";
+  if (!strcmp(op, "<")) return "lt";
+  if (!strcmp(op, "<=")) return "leq";
+  if (!strcmp(op, ">")) return "gt";
+  if (!strcmp(op, ">=")) return "geq";
 }
 
 const char* llvm_get_type(const struct type* type){
@@ -792,8 +785,39 @@ void llvm_exp(const struct exp* exp){
       return;
       break;
     case EXP_UNARY:
+      if (!strcmp(exp->unary.op, "=")){
+        
+        if (exp->unary.exp->kind != EXP_I32){
+          llvm_exp(exp->unary.exp);
+        }
+        else{
+          printf("store %s %d, %s* %%%s, align 4", llvm_get_type(exp->unary.exp->type), exp->unary.exp->num, llvm_get_type(exp->unary.exp->type), symbol_to_str(exp->unary.exp->id));
+          break;
+        }
+      }
+      else{
+
+        if (exp->unary.exp->kind != EXP_I32){
+          llvm_exp(exp->unary.exp);
+          last_register++;
+        }
+
+        // Print beginning
+        printf("%%r%d = %s %s %%%s ", last_register, llvm_op_to_str(exp->unary.op), llvm_get_type(exp->unary.exp->type), symbol_to_str(exp->unary.exp->id));
+        
+        // Print end
+        if (exp->unary.exp->kind == EXP_I32)
+          printf("%d", exp->unary.exp->num);
+        else
+          printf("%%r%d", last_register - 1);
+        
+        printf("\n");
+      }
+    
+      printf("store %s %%r%d, %s* %%%s, align 4", llvm_get_type(exp->unary.exp->type), last_register, llvm_get_type(exp->unary.exp->type), symbol_to_str(exp->unary.exp->id));
       break;
     case EXP_BINARY:
+      printf("%s", exp->binary.op);
       // Do left expression
       if (exp->binary.left->kind != EXP_I32){
         llvm_exp(exp->binary.left);
@@ -805,55 +829,26 @@ void llvm_exp(const struct exp* exp){
         llvm_exp(exp->binary.right);
         last_register++;
       }
+    
+      // Print beginning
       printf("%%r%d = %s i32 ", last_register, llvm_op_to_str(exp->binary.op));
       
-      // if left is num
+      // Print left
       if (exp->binary.left->kind == EXP_I32)
         printf("%d, ", exp->binary.left->num);
       else
         printf("%%r%d, ", l);
     
-      // if right is num
+      // Print right
       if (exp->binary.right->kind == EXP_I32)
-        printf("%d ", exp->binary.right->num);
+        printf("%d", exp->binary.right->num);
       else
-        printf("%%r%d ", last_register - 1); 
+        printf("%%r%d", last_register - 1); 
       
-      printf("\n");
       break;
   }
   
   printf("%%r%d = ...\n", last_register);
-  
-}
-
-// LEG: 0 = left
-//      1 = right
-static void llvm_binary(const struct exp* exp, int leg){
-  
-  char* r0 = "eax";
-  char* r1 = "edx";
-  if (leg == 1){
-    r0 = r1;
-    r1 = "ecx";
-  }
-  
-  if (exp->binary.left->kind == EXP_I32)
-    printf("  mov %s, %d\n", r0, exp->binary.left->num);
-  else
-    llvm_binary(exp->binary.left, 0);
-    
-  if (exp->binary.right->kind == EXP_I32)
-    printf("  mov %s, %d\n", r1, exp->binary.right->num);
-  else
-    llvm_binary(exp->binary.right, 1);
-  
-  printf("  ");
-  if (!strcmp(exp->binary.op, "+")) printf("add");
-  if (!strcmp(exp->binary.op, "-")) printf("sub");
-  if (!strcmp(exp->binary.op, "*")) printf("imul");
-  if (!strcmp(exp->binary.op, "/")) printf("idiv");
-  printf(" %s, %s\n", r0, r1);
   
 }
 
