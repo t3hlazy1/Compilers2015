@@ -29,6 +29,7 @@ const char* llvm_get_type(const struct type* type);
 void llvm_print_type(const struct type* type);
 
 static int last_register;
+static struct type* last_type;
 
 #define INDENT "  "
 static int indent_level;
@@ -613,6 +614,7 @@ void llvm_item(const struct item* item){
       
       // Print function name
       printf("define %s @%s(", llvm_get_type(item->fn_def.type->type), symbol_to_str(item->id));
+      last_type = item->fn_def.type->type;
       
       // Loop through all params
       for(p = item->fn_def.type->params; p; p = p->next){
@@ -818,6 +820,9 @@ static void llvm_stmt(const struct stmt* stmt){
       break;
     case STMT_RETURN:
       llvm_exp(stmt->exp);
+      //  %0 = load i32* %x, align 4
+      //ret i32 %0
+      printf("ret %s %%%d\n", llvm_get_type(last_type), last_register);
       break;
     case STMT_EXP:
       llvm_exp(stmt->exp);
