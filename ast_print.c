@@ -31,6 +31,7 @@ const char* llvm_op_to_str(const char* op);
 
 static int last_register;
 static struct type* last_type;
+static int last_label;
 
 #define INDENT "  "
 static int indent_level;
@@ -578,6 +579,7 @@ void llvm_crate(const GList* items){
 
 void llvm_item(const struct item* item){
   last_register = 0;
+  last_label = 0;
   GList* p;
   switch (item->kind){
     case ITEM_FN_DEF:{
@@ -805,7 +807,25 @@ void llvm_exp(const struct exp* exp){
       return;
       break;
     case EXP_IF:
-      printf("%%r%d = <IF>\n", last_register);
+      l = last_label++;
+      
+      llvm_exp(exp->if_else.cond);
+      printf("  br i1 %%cmp%d, label %%if.then%d, label %%if.else%d\n\nif.then%d:\n",
+             last_register,
+             l,
+             l,
+             l);
+      
+      llvm_exp(exp->if_else.block_true);
+      printf("  br label %%if.end%d\n\nif.else%d:\n",
+             l,
+             l);
+    
+      llvm_exp(exp->if_else.block_false);
+      printf("  br label %%if.end%d\n\nif.end%d:\n",
+             l,
+             l);
+    
       return;
       break;
     case EXP_WHILE:
@@ -952,6 +972,7 @@ void llvm_exp(const struct exp* exp){
 static void llvm_stmt(const struct stmt* stmt){
   last_register++;
   struct type* t;
+  
   switch (stmt->kind) {
     case STMT_LET:
       if (stmt->let.type)
