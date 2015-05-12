@@ -829,11 +829,29 @@ void llvm_exp(const struct exp* exp){
       return;
       break;
     case EXP_WHILE:
-      printf("%%r%d = <WHILE>\n", last_register);
+      l = last_label++;
+      
+      printf("  br label %%while.cond%d\n\nwhile.cond%d:\n",
+             l,
+             l);
+    
+      llvm_exp(exp->loop_while.cond);
+      printf("  br i1 %%cmp%d, label %%while.body%d, label %%while.end%d\n\n",
+             last_register,
+             l,
+             l);
+      
+      printf("while.body%d:\n", l);
+      llvm_exp(exp->loop_while.block);
+      
+      printf("  br label %%while.cond%d\n\nwhile.end%d:\n", l, l);
       return;
       break;
     case EXP_LOOP:
-      printf("%%r%d = <LOOP>\n", last_register);
+      l = last_label++;
+      printf("  br label %%loop.begin%d\n\nloop.begin%d:\n", l, l);
+      llvm_exp(exp->exp);
+      printf("  br label %%loop.begin%d\n\nloop.begin%d:\n", l, l);
       return;
       break;
     case EXP_BLOCK:
