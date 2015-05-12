@@ -27,6 +27,7 @@ void llvm_item(const struct item*);
 void llvm_exp(const struct exp*);
 const char* llvm_get_type(const struct type* type);
 void llvm_print_type(const struct type* type);
+const char* llvm_op_to_str(const char* op);
 
 static int last_register;
 static struct type* last_type;
@@ -651,6 +652,10 @@ void llvm_item(const struct item* item){
   
 }
 
+const char* llvm_op_to_str(const char* op){
+  return "op"; 
+}
+
 const char* llvm_get_type(const struct type* type){
   
   switch (type->kind){
@@ -705,6 +710,7 @@ void llvm_print_type(const struct type* type){
 }
 
 void llvm_exp(const struct exp* exp){
+  int l;
   if (!exp) return;
   last_register++;
   
@@ -760,6 +766,32 @@ void llvm_exp(const struct exp* exp){
     case EXP_UNARY:
       break;
     case EXP_BINARY:
+      // Do left expression
+      if (exp->binary.left->kind != EXP_I32){
+        llvm_exp(exp->binary.left);
+        l = last_register;
+      }
+    
+      // Do right expression
+      if (exp->binary.right->kind != EXP_I32){
+        llvm_exp(exp->binary.right);
+        last_register++;
+      }
+      printf("%%r%d = %s i32 ", last_register, llvm_op_to_str(exp->binary.op));
+      
+      // if left is num
+      if (exp->binary.left->kind == EXP_I32)
+        printf("%d, ", exp->binary.left->num);
+      else
+        printf("%%r%d, ", l);
+    
+      // if right is num
+      if (exp->binary.right->kind == EXP_I32)
+        printf("%d ", exp->binary.right->num);
+      else
+        printf("%%r%d ", last_register - 1); 
+      
+      printf("\n");
       break;
   }
   
@@ -820,8 +852,6 @@ static void llvm_stmt(const struct stmt* stmt){
       break;
     case STMT_RETURN:
       llvm_exp(stmt->exp);
-      //  %0 = load i32* %x, align 4
-      //ret i32 %0
       printf("ret %s %%%d\n", llvm_get_type(last_type), last_register);
       break;
     case STMT_EXP:
