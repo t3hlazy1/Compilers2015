@@ -28,6 +28,7 @@ void llvm_exp(const struct exp*);
 const char* llvm_get_type(const struct type* type);
 void llvm_print_type(const struct type* type);
 const char* llvm_op_to_str(const char* op);
+static void llvm_strings(const struct item* item);
 
 static int last_register;
 static struct type* last_type;
@@ -574,6 +575,11 @@ void type_print_pretty(const struct type* type) {
 /* LLVM */
 
 void llvm_crate(const GList* items){
+  printf("@.str = private unnamed_addr constant [3 x i8] c\"%%s\\00\", align 1\n");
+  printf("@.str1 = private unnamed_addr constant [3 x i8] c\"%%d\\00\", align 1\n");
+  
+  g_list_foreach((GList*)items, (GFunc)llvm_strings, NULL);
+  printf("\n");
   g_list_foreach((GList*)items, (GFunc)llvm_item, NULL);
 }
 
@@ -721,7 +727,7 @@ void llvm_exp(const struct exp* exp){
   
   switch (exp->kind) {
     case EXP_UNIT:
-      printf("%%r%d = <UNIT>\n", last_register);
+      //printf("%%r%d = <UNIT>\n", last_register);
       return;
       break;
     case EXP_TRUE:
@@ -745,7 +751,6 @@ void llvm_exp(const struct exp* exp){
       return;
       break;
     case EXP_ID:
-    //%0 = load i32* %x, align 4
       printf("%%r%d = load %s* %%%s, align 4\n", last_register, llvm_get_type(exp->type), symbol_to_str(exp->id));
     
       return;
@@ -1019,3 +1024,50 @@ static void llvm_stmt(const struct stmt* stmt){
   }
   
 }
+
+static void llvm_strings(const struct item* item){
+  int i = 2;
+  struct stmt* stmt;
+  struct exp* exp;
+  GList* l;
+  
+  if (item->kind == ITEM_FN_DEF){
+    
+    for(l = item->fn_def.block->block.stmts; l; l = l->next){
+      stmt = l->data;
+      
+      if (stmt->kind == STMT_EXP){
+        if (stmt->exp->kind == EXP_FN_CALL){
+          if(!strcmp(symbol_to_str(stmt->exp->fn_call.id),"prints")){
+            exp = stmt->exp->fn_call.exps->data;
+            if (exp->kind == EXP_STR){
+              //@.str = private unnamed_addr constant [3 x i8] c"%s\00", align 1
+              printf("@.str%d = private unnamed_addr constant [%u x i8] c\"%s\\00\", align 1\n",
+                     i,
+                     (unsigned)strlen(exp->str) + 1,
+                     exp->str);
+              i++;
+            }
+          }
+        }
+      }
+      
+    }
+    
+    if (exp->block.exp && exp->block.exp->kind == EXP_FN_CALL){
+      if(!strcmp(symbol_to_str(exp->block.exp->fn_call.id),"prints")){
+        exp = exp->block.exp->fn_call.exps->data;
+        if (exp->kind == EXP_STR){
+          //@.str = private unnamed_addr constant [3 x i8] c"%s\00", align 1
+          printf("@.str%d = private unnamed_addr constant [%u x i8] c\"%s\\00\", align 1\n",
+                 i,
+                 (unsigned)strlen(exp->str) + 1,
+                 exp->str);
+        }
+      }
+    }
+     
+  }
+
+}
+  
