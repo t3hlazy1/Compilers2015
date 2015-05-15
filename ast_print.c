@@ -582,7 +582,7 @@ void llvm_crate(const GList* items){
   printf("\n");
   g_list_foreach((GList*)items, (GFunc)llvm_item, NULL);
   
-  printf("; Function Attrs: nounwind\ndeclare i32 @printf(i8*, ...) #0\n");
+  printf("; Function Attrs: nounwind\ndeclare i32 @printf(i8*, ...) #0\n\n");
   printf("!0 = !{!\"clang version 3.6.0 (tags/RELEASE_360/final)\"}\n");
 }
 
@@ -658,12 +658,12 @@ const char* llvm_op_to_str(const char* op){
   if (!strcmp(op, "%")) return "srem";
   
   // ASSIGN
-  if (!strcmp(op, "=")) return "assign";
-  if (!strcmp(op, "+=")) return "assign-add";
-  if (!strcmp(op, "-=")) return "assign-sub";
-  if (!strcmp(op, "*=")) return "assign-mul";
-  if (!strcmp(op, "/=")) return "assign-div";
-  if (!strcmp(op, "%=")) return "assign-rem";
+  if (!strcmp(op, "=")) return "<ASSIGN>";
+  if (!strcmp(op, "+=")) return "add";
+  if (!strcmp(op, "-=")) return "sub";
+  if (!strcmp(op, "*=")) return "mul";
+  if (!strcmp(op, "/=")) return "sdiv";
+  if (!strcmp(op, "%=")) return "srem";
   
   // BOOLEAN
   if (!strcmp(op, "&&")) return "and";
@@ -740,36 +740,36 @@ void llvm_exp(const struct exp* exp){
       return;
       break;
     case EXP_TRUE:
-      printf("%%r%d = <TRUE>\n", last_register);
+      printf("  %%r%d = <TRUE>\n", last_register);
       return;
       break;
     case EXP_FALSE:
-      printf("%%r%d = <FALSE>\n", last_register);
+      printf("  %%r%d = <FALSE>\n", last_register);
       return;
       break;
     case EXP_I32:
-      printf("%%r%d = <I32>\n", last_register);
+      printf("  %%r%d = <I32>\n", last_register);
       return;
       break;
     case EXP_U8:
-      printf("%%r%d = <U8>\n", last_register);
+      printf("  %%r%d = <U8>\n", last_register);
       return;
       break;
     case EXP_STR:
-      printf("%%r%d = <STR>\n", last_register);
+      printf("  %%r%d = <STR>\n", last_register);
       return;
       break;
     case EXP_ID:
-      printf("%%r%d = load %s* %%%s, align 4\n", last_register, llvm_get_type(exp->type), symbol_to_str(exp->id));
+      printf("  %%r%d = load %s* %%%s, align 4\n", last_register, llvm_get_type(exp->type), symbol_to_str(exp->id));
     
       return;
       break;
     case EXP_ENUM:
-      printf("%%r%d = <ENUM>\n", last_register);
+      printf("  %%r%d = <ENUM>\n", last_register);
       return;
       break;
     case EXP_STRUCT:
-      printf("%%r%d = <STRUCT>\n", last_register);
+      printf("  %%r%d = <STRUCT>\n", last_register);
       return;
       break;
 
@@ -780,20 +780,20 @@ void llvm_exp(const struct exp* exp){
 
 
     case EXP_ARRAY:
-      printf("%%r%d = <ARRAY>\n", last_register);
+      printf("  %%r%d = <ARRAY>\n", last_register);
       return;
       break;
     case EXP_LOOKUP:
-      printf("%%r%d = <LOOKUP>\n", last_register);
+      printf("  %%r%d = <LOOKUP>\n", last_register);
       return;
       break;
     case EXP_INDEX:
-      printf("%%r%d = <INDEX>\n", last_register);
+      printf("  %%r%d = <INDEX>\n", last_register);
       return;
       break;
     case EXP_FN_CALL:
-      printf("%%r%d = <FN CALL>\n", last_register);
-      return;
+      printf("  %%r%d = <FN CALL>\n", last_register);
+      return;/*
       printf("%%call%d = call %s @%s(", last_register, llvm_print_type(exp->type), symbol_to_str(exp->fn_call.id));
       
       //get parameter list of function name
@@ -810,13 +810,14 @@ void llvm_exp(const struct exp* exp){
       }
       printf(")");
       return;
+      */
       break;
     case EXP_BOX_NEW:
-      printf("%%r%d = <BOX NEW>\n", last_register);
+      printf("  %%r%d = <BOX NEW>\n", last_register);
       return;
       break;
     case EXP_MATCH:
-      printf("%%r%d = <MATCH>\n", last_register);
+      printf("  %%r%d = <MATCH>\n", last_register);
       return;
       break;
     case EXP_IF:
@@ -875,11 +876,11 @@ void llvm_exp(const struct exp* exp){
         // Register
         if (exp->binary.right->kind != EXP_I32){
           llvm_exp(exp->binary.right);
-          printf("store %s %%r%d, %s* %%%s, align 4\n", llvm_get_type(exp->binary.right->type), last_register, llvm_get_type(exp->binary.right->type), symbol_to_str(exp->binary.left->id));   
+          printf("  store %s %%r%d, %s* %%%s, align 4\n", llvm_get_type(exp->binary.right->type), last_register, llvm_get_type(exp->binary.right->type), symbol_to_str(exp->binary.left->id));   
         }
         // Plain number
         else{
-          printf("store i32 %d, i32* %%%s, align 4\n", exp->binary.right->num, symbol_to_str(exp->binary.left->id));   
+          printf("  store i32 %d, i32* %%%s, align 4\n", exp->binary.right->num, symbol_to_str(exp->binary.left->id));   
         }
         // TODO: Add string support here
         // store i8* getelementptr inbounds ([5 x i8]* @.str, i32 0, i32 0), i8** %x, align 4
@@ -903,7 +904,7 @@ void llvm_exp(const struct exp* exp){
         last_register++;
 
         // Print beginning
-        printf("%%r%d = %s i32 %%r%d, ", last_register, llvm_op_to_str(exp->binary.op), l);
+        printf("  %%r%d = %s i32 %%r%d, ", last_register, llvm_op_to_str(exp->binary.op), l);
 
         // Print end
         if (exp->binary.right->kind == EXP_I32)
@@ -911,7 +912,7 @@ void llvm_exp(const struct exp* exp){
         else
           printf("%%r%d", last_register - 1);
 
-        printf("\nstore i32 %%r%d, i32* %%%s, align 4\n", last_register, symbol_to_str(exp->binary.left->id));
+        printf("\n  store i32 %%r%d, i32* %%%s, align 4\n", last_register, symbol_to_str(exp->binary.left->id));
         
       } 
       // Arithmetic
@@ -934,7 +935,7 @@ void llvm_exp(const struct exp* exp){
         }
 
         // Print beginning
-        printf("%%r%d = %s i32 ", last_register, llvm_op_to_str(exp->binary.op));
+        printf("  %%r%d = %s i32 ", last_register, llvm_op_to_str(exp->binary.op));
 
         // Print left
         if (exp->binary.left->kind == EXP_I32)
@@ -968,7 +969,7 @@ void llvm_exp(const struct exp* exp){
         }
         
         // Print beginning
-        printf("%%cmp%d = icmp %s %s ", last_register, llvm_op_to_str(exp->binary.op), llvm_get_type(exp->binary.left->type));
+        printf("  %%cmp%d = icmp %s %s ", last_register, llvm_op_to_str(exp->binary.op), llvm_get_type(exp->binary.left->type));
         
         // Print left
         if (exp->binary.left->kind == EXP_I32)
@@ -987,7 +988,7 @@ void llvm_exp(const struct exp* exp){
       return;
   }
   
-  printf("%%r%d = ...\n", last_register);
+  printf("  %%r%d = ...\n", last_register);
   
 }
 
