@@ -706,7 +706,7 @@ const char* llvm_get_type(const struct type* type){
       return "div";
       break;
     case TYPE_ID:
-      return "id";
+      return "\%struct.";
       break;
     case TYPE_REF:
       return "ref";
@@ -787,13 +787,10 @@ void llvm_exp(const struct exp* exp){
       return;
       break;
     case EXP_STRUCT:
-      //printf("%%r%d = <STRUCT>\n", last_register);
-      
-
-	//print struct variable name, %struct.Name
-	//printf("%%%s = alloca %%struct.%s, align 4\n", "struct_var", symbol_to_str(exp->id));
-	//printf("%%%s = getelementptr inbounds %%struct.%s* %%s, i32 0, i32 0\n", "struct_mem", "struct_name", "struct_var");
-	//printf("store i32 %d, i32* %s%d, align 4\n", 10, "struct_mem", "last_reg");
+      last_register++;
+      //print struct variable name, %struct.Name
+      printf("%%struct%d = getelementptr inbounds %%struct.%s* %%s, i32 0, i32 0\n", "struct_mem", "struct_name", "struct_var");
+      printf("store i32 %d, i32* %s%d, align 4\n", 10, "struct_mem", last_register);
 
 	return; 
 	break;
@@ -811,23 +808,31 @@ void llvm_exp(const struct exp* exp){
       break;
 
     case EXP_FN_CALL:
-      printf("  %%r%d = <FN CALL>\n", last_register);
-      return;
-      /*printf("%%call%d = call %s @%s(", last_register, llvm_print_type(exp->type), symbol_to_str(exp->fn_call.id));
-       //get parameter list of function name
 
+      if (!strcmp(symbol_to_str(exp->fn_call.id), "printi")){
+      //get parameter list and type
       for(p = exp->fn_call.exps; p; p = p->next){
-        struct exp* expression = p->data; 
+            struct exp* expression = p->data; 
+            llvm_exp(expression);         
+      } 
+            
+      printf("%%call = call i32 (i8*, ...)* @printi(i8* getelementptr inbounds ([3 x i8]* @.str, i32 0, i32 0), i32 %%r%d) #1\n", last_register);
 
-		  printf("%s %d", llvm_get_type(expression->type), expression->num); 
+      }else{
 
-        if(p->next){
-          printf(", ");
-        }
-      }	
+            printf("%%call%d = call %s @%s(", last_register, llvm_get_type(exp->type), symbol_to_str(exp->fn_call.id));
+            for(p = exp->fn_call.exps; p; p = p->next){
+            struct exp* expression = p->data; 
+      
+                    printf("%s %d", llvm_get_type(expression->type), expression->num); 
+
+            if(p->next){
+            printf(", ");
+            }     
+                }
+      }     
       printf(")\n");
       return;
-      */
       break;
     case EXP_BOX_NEW:
       printf("%%r%d = <BOX NEW>\n", last_register);
