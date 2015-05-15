@@ -207,6 +207,9 @@ static void annotate_exp(struct exp* exp, struct env* env) {
 
                   // If the lengths are different...
                   if (p || a) exp->type = type_error();
+              
+                  if (!strcmp(symbol_to_str(exp->fn_call.id), "prints") || !strcmp(symbol_to_str(exp->fn_call.id), "printi"))
+                    exp->type = type_unit();
                   // If we haven't already set our type to error, then our type
                   // must be the function return type.
                   else if (exp->type == type_invalid())
@@ -423,17 +426,25 @@ static void annotate_crate(GList* crate, struct env* env) {
 }
 
 int main(int argc, char** argv) {
-  int i;
+  struct type* type = type_ok();
       if (!yyparse()) {
             struct env* genv = build_env(crate);
 
             check_main(genv);
-
             annotate_crate(crate, genv);
-              crate_print(crate);
-            // if (crate->type != ERROR)
+        
+            for (const GList* i = crate; i; i = i->next) {
+              struct item* item = i->data;
+              if (item->type != type_ok()) {
+                type = type_error();
+                break;
+              }
+            }
+        
+            if (type != type_error())
               llvm_crate(crate);     
-            // else
+            else
+              crate_print(crate);
       }
 
       crate_destroy(crate);

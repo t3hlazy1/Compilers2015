@@ -624,7 +624,7 @@ void llvm_item(const struct item* item){
       for(p = item->fn_def.type->params; p; p = p->next){
         struct pair* param = p->data;
         
-        printf("  %s.addr = alloca %s, align 4\n", symbol_to_str(param->param.pat->bind.id), llvm_get_type(param->param.type));
+        printf("  %%%s.addr = alloca %s, align 4\n", symbol_to_str(param->param.pat->bind.id), llvm_get_type(param->param.type));
         printf("  store %s %%%s, %s* %%%s.addr, align 4\n", llvm_get_type(param->param.type), symbol_to_str(param->param.pat->bind.id), llvm_get_type(param->param.type), symbol_to_str(param->param.pat->bind.id));
         
       }
@@ -1146,7 +1146,7 @@ static void llvm_strings(const struct item* item){
       }
       
     }
-    
+    /*
     if (exp->block.exp && exp->block.exp->kind == EXP_FN_CALL){
       if(!strcmp(symbol_to_str(exp->block.exp->fn_call.id),"prints")){
         exp = exp->block.exp->fn_call.exps->data;
@@ -1158,7 +1158,7 @@ static void llvm_strings(const struct item* item){
                  exp->str);
         }
       }
-    }
+    }*/
      
   }
 
