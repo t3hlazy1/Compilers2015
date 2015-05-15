@@ -652,29 +652,34 @@ void llvm_item(const struct item* item){
 }
 
 const char* llvm_op_to_str(const char* op){
-  
-  //return "op"; 
+
   //if (!strcmp(op, "&")) return mut? "addr-of-mut" : "addr-of";
   if (!strcmp(op, "!")) return "not";
+  
+  // MATH
   if (!strcmp(op, "+")) return "add";
-  //if (!strcmp(op, "-")) return unary? "neg" : "sub";
-  //if (!strcmp(op, "*")) return unary? "deref" : "mul";
-  if (!strcmp(op, "/")) return "div";
-  if (!strcmp(op, "%")) return "rem";
+  if (!strcmp(op, "-")) return "sub";
+  if (!strcmp(op, "*")) return "mul";
+  if (!strcmp(op, "/")) return "sdiv";
+  if (!strcmp(op, "%")) return "srem";
+  
+  // ASSIGN
   if (!strcmp(op, "=")) return "assign";
-  if (!strcmp(op, "+=")) return "assign-add";
-  if (!strcmp(op, "-=")) return "assign-sub";
-  if (!strcmp(op, "*=")) return "assign-mul";
-  if (!strcmp(op, "/=")) return "assign-div";
-  if (!strcmp(op, "%=")) return "assign-rem";
-  if (!strcmp(op, "&&")) return "and";
-  if (!strcmp(op, "||")) return "or";
-  if (!strcmp(op, "!=")) return "neq";
+  if (!strcmp(op, "+=")) return "add";
+  if (!strcmp(op, "-=")) return "sub";
+  if (!strcmp(op, "*=")) return "mul";
+  if (!strcmp(op, "/=")) return "sdiv";
+  if (!strcmp(op, "%=")) return "srem";
+  
+  // BOOLEAN
+  if (!strcmp(op, "&&")) return "and"; // TODO
+  if (!strcmp(op, "||")) return "or";  // TODO
+  if (!strcmp(op, "!=")) return "ne";
   if (!strcmp(op, "==")) return "eq";
-  if (!strcmp(op, "<")) return "lt";
-  if (!strcmp(op, "<=")) return "leq";
-  if (!strcmp(op, ">")) return "gt";
-  if (!strcmp(op, ">=")) return "geq";
+  if (!strcmp(op, "<")) return "slt";
+  if (!strcmp(op, "<=")) return "sle";
+  if (!strcmp(op, ">")) return "sgt";
+  if (!strcmp(op, ">=")) return "sge";
 }
 
 const char* llvm_get_type(const struct type* type){
@@ -786,9 +791,9 @@ void llvm_exp(const struct exp* exp){
       
 
 	//print struct variable name, %struct.Name
-	printf("%%%s = alloca %%struct.%s, align 4\n", "struct_var", symbol_to_str(exp->id));
-	printf("%%%s = getelementptr inbounds %%struct.%s* %%s, i32 0, i32 0\n", "struct_mem", "struct_name", "struct_var");
-	printf("store i32 %d, i32* %s%d, align 4\n", 10, "struct_mem", "last_reg");
+	//printf("%%%s = alloca %%struct.%s, align 4\n", "struct_var", symbol_to_str(exp->id));
+	//printf("%%%s = getelementptr inbounds %%struct.%s* %%s, i32 0, i32 0\n", "struct_mem", "struct_name", "struct_var");
+	//printf("store i32 %d, i32* %s%d, align 4\n", 10, "struct_mem", "last_reg");
 
 	return; 
 	break;
@@ -942,7 +947,7 @@ void llvm_exp(const struct exp* exp){
         last_register++;
 
         // Print beginning
-        printf("%%r%d = %s i32 %%r%d, ", last_register, llvm_op_to_str(exp->binary.op), l);
+        printf("  %%r%d = %s i32 %%r%d, ", last_register, llvm_op_to_str(exp->binary.op), l);
 
         // Print end
         if (exp->binary.right->kind == EXP_I32)
@@ -975,7 +980,7 @@ void llvm_exp(const struct exp* exp){
         }
 
         // Print beginning
-        printf("%%r%d = %s i32 ", last_register, llvm_op_to_str(exp->binary.op));
+        printf("  %%r%d = %s i32 ", last_register, llvm_op_to_str(exp->binary.op));
 
         // Print left
         if (exp->binary.left->kind == EXP_I32)
@@ -1009,7 +1014,7 @@ void llvm_exp(const struct exp* exp){
         }
         
         // Print beginning
-        printf("%%cmp%d = icmp %s %s ", last_register, llvm_op_to_str(exp->binary.op), llvm_get_type(exp->binary.left->type));
+        printf("  %%cmp%d = icmp %s %s ", last_register, llvm_op_to_str(exp->binary.op), llvm_get_type(exp->binary.left->type));
         
         // Print left
         if (exp->binary.left->kind == EXP_I32)
