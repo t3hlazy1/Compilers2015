@@ -33,7 +33,7 @@ static void llvm_strings(const struct item* item);
 static int last_register;
 static struct type* last_type;
 static int last_label;
-
+static GList* last_args;
 #define INDENT "  "
 static int indent_level;
 static void print_indent(void) {
@@ -590,9 +590,11 @@ void llvm_item(const struct item* item){
   last_register = 0;
   last_label = 0;
   GList* p;
+  last_args = NULL;
   switch (item->kind){
     case ITEM_FN_DEF:{
-      
+      last_args = item->fn_def.type->params;
+        
       // NoUnwind
       printf("; Function Attrs: nounwind\n");
       
@@ -612,6 +614,15 @@ void llvm_item(const struct item* item){
       
       printf(") #0 {\n");
       printf("entry:\n");
+      
+      // Loop through all params
+      for(p = item->fn_def.type->params; p; p = p->next){
+        struct pair* param = p->data;
+        
+        printf("  %s.addr = alloca %s, align 4\n", symbol_to_str(param->param.pat->bind.id), llvm_get_type(param->param.type));
+        printf("  store %s %%%s, %s* %%%s.addr, align 4\n", llvm_get_type(param->param.type), symbol_to_str(param->param.pat->bind.id), llvm_get_type(param->param.type), symbol_to_str(param->param.pat->bind.id));
+        
+      }
       
       //printf("%retval = alloca i32, align 4");  // ???: There isn't a retval register for every function
 
@@ -644,6 +655,7 @@ void llvm_item(const struct item* item){
 }
 
 const char* llvm_op_to_str(const char* op){
+  
   //return "op"; 
   //if (!strcmp(op, "&")) return mut? "addr-of-mut" : "addr-of";
   
@@ -732,6 +744,7 @@ void llvm_exp(const struct exp* exp){
   GList* p; 
   if (!exp) return;
   last_register++;
+  char* function_var = "";
   
   switch (exp->kind) {
     case EXP_UNIT:
@@ -759,7 +772,16 @@ void llvm_exp(const struct exp* exp){
       return;
       break;
     case EXP_ID:
-      printf("  %%r%d = load %s* %%%s, align 4\n", last_register, llvm_get_type(exp->type), symbol_to_str(exp->id));
+    
+      // Check if variable is function variable 
+      for(p = last_args; p; p = p->next){
+        struct pair* param = p->data;
+        if (!strcmp(symbol_to_str(param->param.pat->bind.id),symbol_to_str(exp->id))){
+          function_var = ".addr";
+          break;
+        }
+      }
+      printf("  %%r%d = load %s* %%%s%s, align 4\n", last_register, llvm_get_type(exp->type), symbol_to_str(exp->id), function_var);
     
       return;
       break;
@@ -791,7 +813,7 @@ void llvm_exp(const struct exp* exp){
       return;
       break;
     case EXP_FN_CALL:
-      printf("  %%r%d = <FN CALL>\n", last_register);
+      /*printf("  %%r%d = <FN CALL>\n", last_register);
       return;
       printf("%%call%d = call %s @%s(", last_register, llvm_print_type(exp->type), symbol_to_str(exp->fn_call.id));
        //get parameter list of function name
@@ -806,6 +828,7 @@ void llvm_exp(const struct exp* exp){
       }	
       printf(")\n");
       return;
+      */
       break;
     case EXP_BOX_NEW:
       printf("  %%r%d = <BOX NEW>\n", last_register);
@@ -867,15 +890,22 @@ void llvm_exp(const struct exp* exp){
     
       // Plain assignment
       if (!strcmp(exp->binary.op, "=")){
-        
+        // Check if variable is function variable 
+        for(p = last_args; p; p = p->next){
+          struct pair* param = p->data;
+          if (!strcmp(symbol_to_str(param->param.pat->bind.id),symbol_to_str(exp->binary.left->id))){
+            function_var = ".addr";
+            break;
+          }
+        }
         // Register
         if (exp->binary.right->kind != EXP_I32){
           llvm_exp(exp->binary.right);
-          printf("  store %s %%r%d, %s* %%%s, align 4\n", llvm_get_type(exp->binary.right->type), last_register, llvm_get_type(exp->binary.right->type), symbol_to_str(exp->binary.left->id));   
+          printf("  store %s %%r%d, %s* %%%s%s, align 4\n", llvm_get_type(exp->binary.right->type), last_register, llvm_get_type(exp->binary.right->type), symbol_to_str(exp->binary.left->id), function_var);   
         }
         // Plain number
         else{
-          printf("  store i32 %d, i32* %%%s, align 4\n", exp->binary.right->num, symbol_to_str(exp->binary.left->id));   
+          printf("  store i32 %d, i32* %%%s%s, align 4\n", exp->binary.right->num, symbol_to_str(exp->binary.left->id), function_var);   
         }
         // TODO: Add string support here
         // store i8* getelementptr inbounds ([5 x i8]* @.str, i32 0, i32 0), i8** %x, align 4
@@ -889,6 +919,14 @@ void llvm_exp(const struct exp* exp){
           !strcmp(exp->binary.op, "*=") ||
           !strcmp(exp->binary.op, "/=") ||
           !strcmp(exp->binary.op, "%="))  {
+        // Check if variable is function variable 
+        for(p = last_args; p; p = p->next){
+          struct pair* param = p->data;
+          if (!strcmp(symbol_to_str(param->param.pat->bind.id),symbol_to_str(exp->binary.left->id))){
+            function_var = ".addr";
+            break;
+          }
+        }
         
         llvm_exp(exp->binary.left);
         l = last_register;
@@ -907,7 +945,7 @@ void llvm_exp(const struct exp* exp){
         else
           printf("%%r%d", last_register - 1);
 
-        printf("\n  store i32 %%r%d, i32* %%%s, align 4\n", last_register, symbol_to_str(exp->binary.left->id));
+        printf("\n  store i32 %%r%d, i32* %%%s%s, align 4\n", last_register, symbol_to_str(exp->binary.left->id), function_var);
         
       } 
       // Arithmetic
@@ -998,20 +1036,20 @@ static void llvm_stmt(const struct stmt* stmt){
       else
         t = stmt->let.exp->type;
       
-        printf("%%%s = alloca %s, align 4\n", symbol_to_str(stmt->let.pat->bind.id), llvm_get_type(t));
+        printf("  %%%s = alloca %s, align 4\n", symbol_to_str(stmt->let.pat->bind.id), llvm_get_type(t));
       
         
       if (stmt->let.exp){
         
         llvm_exp(stmt->let.exp);
-        printf("store %s %%r%d, %s* %%%s, align 4\n", llvm_get_type(t), last_register, llvm_get_type(t), symbol_to_str(stmt->let.pat->bind.id));
+        printf("  store %s %%r%d, %s* %%%s, align 4\n", llvm_get_type(t), last_register, llvm_get_type(t), symbol_to_str(stmt->let.pat->bind.id));
         
       }
       
       break;
     case STMT_RETURN:
       llvm_exp(stmt->exp);
-      printf("ret %s %%%d\n", llvm_get_type(last_type), last_register);
+      printf("  ret %s %%%d\n", llvm_get_type(last_type), last_register);
       break;
     case STMT_EXP:
       llvm_exp(stmt->exp);
