@@ -34,6 +34,8 @@ static int last_register;
 static struct type* last_type;
 static int last_label;
 static GList* last_args;
+static int last_if;
+
 #define INDENT "  "
 static int indent_level;
 static void print_indent(void) {
@@ -589,6 +591,7 @@ void llvm_crate(const GList* items){
 void llvm_item(const struct item* item){
   last_register = 0;
   last_label = 0;
+  last_if = 0;
   GList* p;
   last_args = NULL;
   switch (item->kind){
@@ -847,7 +850,7 @@ void llvm_exp(const struct exp* exp){
       break;
     case EXP_IF:
       l = last_label++;
-      
+      last_if = l;
       llvm_exp(exp->if_else.cond);
       printf("  br i1 %%cmp%d, label %%if.then%d, label %%if.else%d\n\nif.then%d:\n",
              last_register,
@@ -1002,6 +1005,20 @@ void llvm_exp(const struct exp* exp){
         else
           printf("%%r%d", last_register - 1); 
         printf("\n");
+      }
+      // AND
+      else if(!strcmp(exp->binary.op, "&&")){
+
+        llvm_exp(exp->binary.left);
+        printf("  br i1 %%cmp%d, label %%land.lhs.true%d, label %%if.end%d\n\n", last_register, last_label, last_if);
+        printf("land.lhs.true%d:\n", last_label++);
+        llvm_exp(exp->binary.right);
+      }
+      else if(!strcmp(exp->binary.op, "||")){
+        llvm_exp(exp->binary.left);
+        printf("  br i1 %%cmp%d, label %%if.then%d, label %%lor.lhs.false%d\n\n", last_register, last_if, last_label);
+        printf("lor.lhs.false%d:\n", last_label++);
+        llvm_exp(exp->binary.right);
       }
       // Boolean
       // TODO: Possibly merge with arith
