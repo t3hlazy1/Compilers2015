@@ -622,21 +622,19 @@ void llvm_item(const struct item* item){
       break;
     case ITEM_STRUCT_DEF:
       //item->
-      printf("%%struct.%s = type {", symbol_to_str(item->id));
-      /* FIX
-      for(p = item->struct_def->fields; p; p = p->next){
-        struct pair* param = p->data; 
+      printf("%%struct.%s = type { ", symbol_to_str(item->id));
+      for(p = item->struct_def.fields; p; p = p->next){
+        struct pair* field_def = p->data; 
 
         //print statement
 
-        printf("%s", llvm_get_type(param->param.type));
+        printf("%s", llvm_get_type(field_def->field_def.type));
 
         if(p->next){
           printf(", ");
         }
       }
-      */
-      printf("}\n\n");
+      printf(" }\n\n");
       break;
   }
   
@@ -722,6 +720,7 @@ void llvm_print_type(const struct type* type){
 
 void llvm_exp(const struct exp* exp){
   int l;
+  GList* p; 
   if (!exp) return;
   last_register++;
   
@@ -782,25 +781,23 @@ void llvm_exp(const struct exp* exp){
       printf("%%r%d = <INDEX>\n", last_register);
       return;
       break;
-    case EXP_FN_CALL:
-      printf("%%r%d = <FN CALL>\n", last_register);
-      return;
-      //printf("%%call%d = call %s @%s(", last_register, llvm_print_type(exp->type), symbol_to_str(exp->fn_call.id));
-      /* FIX
+    case EXP_FN_CALL: 
+      //printf("%%r%d = <FN CALL>\n", last_register);
+     // return;
+
+      printf("%%call%d = call %s @%s(", last_register, llvm_get_type(exp->type), symbol_to_str(exp->fn_call.id));
+      //FIX
       //get parameter list of function name
-      for(p = item->fn_call->exps; p; p = p->next){
-        struct pair* param = p->data; 
+      for(p = exp->fn_call.exps; p; p = p->next){
+        struct exp* expression = p->data; 
 
-        //print statement
+		  printf("%s %d", llvm_get_type(expression->type), expression->num); 
 
-        printf("%s %s", llvm_get_type(param->param.type), symbol_to_str(param->pat.bind));
-        
         if(p->next){
           printf(", ");
         }
-      }
-      */
-      printf(")");
+      }	
+      printf(")\n");
       return;
       break;
     case EXP_BOX_NEW:
