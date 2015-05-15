@@ -832,9 +832,9 @@ void llvm_exp(const struct exp* exp){
             
 	if(num_to_print == 0){
 
-      printf("%%call = call i32 (i8*, ...)* @printi(i8* getelementptr inbounds ([3 x i8]* @.str, i32 0, i32 0), i32 %%r%d) #1\n", last_register);
+      printf("  %%r%d = call i32 (i8*, ...)* @printi(i8* getelementptr inbounds ([3 x i8]* @.str, i32 0, i32 0), i32 %%r%d) #1\n", last_register);
 	}else if(num_to_print != 0){
-	printf("%%call = call i32 (i8*, ...)* @printi(i8* getelementptr inbounds ([3 x i8]* @.str, i32 0, i32 0), i32 %d) #1\n", num_to_print);
+	printf("  %%r%d = call i32 (i8*, ...)* @printi(i8* getelementptr inbounds ([3 x i8]* @.str, i32 0, i32 0), i32 %d) #1\n", num_to_print);
 
 	}
 
@@ -844,13 +844,13 @@ void llvm_exp(const struct exp* exp){
 			int len = strlen(expression->str);
 			//printf("%d\n", len);
 			
-			printf("%%call%d = call i32 (i8*, ...)* @prints(i8* getelementptr inbounds ([%d x i8]* @.str%d, i32 0, i32 0)) #1\n", last_register,len+1,last_string);
+			printf("  %%r%d = call i32 (i8*, ...)* @prints(i8* getelementptr inbounds ([%d x i8]* @.str%d, i32 0, i32 0)) #1\n", last_register,len+1,last_string);
 			last_string++;
 
 		}
 	}else{
 
-            printf("%%call%d = call %s @%s(", last_register, llvm_get_type(exp->type), symbol_to_str(exp->fn_call.id));
+            printf("  %%r%d = call %s @%s(", last_register, llvm_get_type(exp->type), symbol_to_str(exp->fn_call.id));
             for(p = exp->fn_call.exps; p; p = p->next){
             struct exp* expression = p->data; 
       
@@ -860,8 +860,7 @@ void llvm_exp(const struct exp* exp){
             printf(", ");
             }     
                 }
-      }     
-      printf(")\n");
+      }   
       return;
       break;
     case EXP_BOX_NEW:
