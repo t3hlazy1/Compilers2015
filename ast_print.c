@@ -35,6 +35,8 @@ static struct type* last_type;
 static int last_label;
 static GList* last_args;
 static int last_if;
+static int num_to_print = 0; 
+static int last_string = 2; 
 
 #define INDENT "  "
 static int indent_level;
@@ -795,8 +797,8 @@ void llvm_exp(const struct exp* exp){
     case EXP_STRUCT:
       last_register++;
       //print struct variable name, %struct.Name
-      printf("%%struct%d = getelementptr inbounds %%struct.%s* %%s, i32 0, i32 0\n", "struct_mem", "struct_name", "struct_var");
-      printf("store i32 %d, i32* %s%d, align 4\n", 10, "struct_mem", last_register);
+      //printf("%%struct%d = getelementptr inbounds %%struct.%s* %%s, i32 0, i32 0\n", "struct_mem", "struct_name", "struct_var");
+      //printf("store i32 %d, i32* %s%d, align 4\n", 10, "struct_mem", last_register);
 
 	return; 
 	break;
@@ -813,18 +815,40 @@ void llvm_exp(const struct exp* exp){
       return;
       break;
 
-    case EXP_FN_CALL:
+    case EXP_FN_CALL: 
 
       if (!strcmp(symbol_to_str(exp->fn_call.id), "printi")){
       //get parameter list and type
       for(p = exp->fn_call.exps; p; p = p->next){
-            struct exp* expression = p->data; 
-            llvm_exp(expression);         
-      } 
-            
-      printf("%%call = call i32 (i8*, ...)* @printi(i8* getelementptr inbounds ([3 x i8]* @.str, i32 0, i32 0), i32 %%r%d) #1\n", last_register);
+            struct exp* expression = p->data;
 
-      }else{
+	    if(expression->kind == EXP_I32){
+		num_to_print = expression->num; 
+	}else{
+ 
+            llvm_exp(expression);
+	}        
+      }
+            
+	if(num_to_print == 0){
+
+      printf("%%call = call i32 (i8*, ...)* @printi(i8* getelementptr inbounds ([3 x i8]* @.str, i32 0, i32 0), i32 %%r%d) #1\n", last_register);
+	}else if(num_to_print != 0){
+	printf("%%call = call i32 (i8*, ...)* @printi(i8* getelementptr inbounds ([3 x i8]* @.str, i32 0, i32 0), i32 %d) #1\n", num_to_print);
+
+	}
+
+      }else if(!strcmp(symbol_to_str(exp->fn_call.id), "prints")){
+		for(p = exp->fn_call.exps; p; p = p->next){
+			struct exp* expression = p->data; 
+			int len = strlen(expression->str);
+			//printf("%d\n", len);
+			
+			printf("%%call%d = call i32 (i8*, ...)* @prints(i8* getelementptr inbounds ([%d x i8]* @.str%d, i32 0, i32 0)) #1\n", last_register,len+1,last_string);
+			last_string++;
+
+		}
+	}else{
 
             printf("%%call%d = call %s @%s(", last_register, llvm_get_type(exp->type), symbol_to_str(exp->fn_call.id));
             for(p = exp->fn_call.exps; p; p = p->next){
