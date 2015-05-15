@@ -581,6 +581,9 @@ void llvm_crate(const GList* items){
   g_list_foreach((GList*)items, (GFunc)llvm_strings, NULL);
   printf("\n");
   g_list_foreach((GList*)items, (GFunc)llvm_item, NULL);
+  
+  printf("; Function Attrs: nounwind\ndeclare i32 @printf(i8*, ...) #0\n\n");
+  printf("!0 = !{!\"clang version 3.6.0 (tags/RELEASE_360/final)\"}\n");
 }
 
 void llvm_item(const struct item* item){
