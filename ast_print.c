@@ -581,6 +581,9 @@ void llvm_crate(const GList* items){
   g_list_foreach((GList*)items, (GFunc)llvm_strings, NULL);
   printf("\n");
   g_list_foreach((GList*)items, (GFunc)llvm_item, NULL);
+  
+  printf("; Function Attrs: nounwind\ndeclare i32 @printf(i8*, ...) #0\n");
+  printf("!0 = !{!\"clang version 3.6.0 (tags/RELEASE_360/final)\"}\n");
 }
 
 void llvm_item(const struct item* item){
@@ -645,26 +648,32 @@ void llvm_item(const struct item* item){
 const char* llvm_op_to_str(const char* op){
   //return "op"; 
   //if (!strcmp(op, "&")) return mut? "addr-of-mut" : "addr-of";
+  
+  // MATH
   if (!strcmp(op, "!")) return "not";
   if (!strcmp(op, "+")) return "add";
-  //if (!strcmp(op, "-")) return unary? "neg" : "sub";
-  //if (!strcmp(op, "*")) return unary? "deref" : "mul";
-  if (!strcmp(op, "/")) return "div";
-  if (!strcmp(op, "%")) return "rem";
+  if (!strcmp(op, "-")) return "sub";
+  if (!strcmp(op, "*")) return "mul";
+  if (!strcmp(op, "/")) return "sdiv";
+  if (!strcmp(op, "%")) return "srem";
+  
+  // ASSIGN
   if (!strcmp(op, "=")) return "assign";
   if (!strcmp(op, "+=")) return "assign-add";
   if (!strcmp(op, "-=")) return "assign-sub";
   if (!strcmp(op, "*=")) return "assign-mul";
   if (!strcmp(op, "/=")) return "assign-div";
   if (!strcmp(op, "%=")) return "assign-rem";
+  
+  // BOOLEAN
   if (!strcmp(op, "&&")) return "and";
   if (!strcmp(op, "||")) return "or";
-  if (!strcmp(op, "!=")) return "neq";
+  if (!strcmp(op, "!=")) return "ne";
   if (!strcmp(op, "==")) return "eq";
-  if (!strcmp(op, "<")) return "lt";
-  if (!strcmp(op, "<=")) return "leq";
-  if (!strcmp(op, ">")) return "gt";
-  if (!strcmp(op, ">=")) return "geq";
+  if (!strcmp(op, "<")) return "slt";
+  if (!strcmp(op, "<=")) return "sle";
+  if (!strcmp(op, ">")) return "sgt";
+  if (!strcmp(op, ">=")) return "sge";
 }
 
 const char* llvm_get_type(const struct type* type){
@@ -785,8 +794,8 @@ void llvm_exp(const struct exp* exp){
     case EXP_FN_CALL:
       printf("%%r%d = <FN CALL>\n", last_register);
       return;
-      //printf("%%call%d = call %s @%s(", last_register, llvm_print_type(exp->type), symbol_to_str(exp->fn_call.id));
-      /* FIX
+      printf("%%call%d = call %s @%s(", last_register, llvm_print_type(exp->type), symbol_to_str(exp->fn_call.id));
+      
       //get parameter list of function name
       for(p = item->fn_call->exps; p; p = p->next){
         struct pair* param = p->data; 
@@ -799,7 +808,6 @@ void llvm_exp(const struct exp* exp){
           printf(", ");
         }
       }
-      */
       printf(")");
       return;
       break;
@@ -816,29 +824,20 @@ void llvm_exp(const struct exp* exp){
       
       llvm_exp(exp->if_else.cond);
       printf("  br i1 %%cmp%d, label %%if.then%d, label %%if.else%d\n\nif.then%d:\n",
-             last_register,
-             l,
-             l,
-             l);
+             last_register, l, l, l);
       
       llvm_exp(exp->if_else.block_true);
-      printf("  br label %%if.end%d\n\nif.else%d:\n",
-             l,
-             l);
+      printf("  br label %%if.end%d\n\nif.else%d:\n", l, l);
     
       llvm_exp(exp->if_else.block_false);
-      printf("  br label %%if.end%d\n\nif.end%d:\n",
-             l,
-             l);
+      printf("  br label %%if.end%d\n\nif.end%d:\n", l, l);
     
       return;
       break;
     case EXP_WHILE:
       l = last_label++;
       
-      printf("  br label %%while.cond%d\n\nwhile.cond%d:\n",
-             l,
-             l);
+      printf("  br label %%while.cond%d\n\nwhile.cond%d:\n", l, l);
     
       llvm_exp(exp->loop_while.cond);
       printf("  br i1 %%cmp%d, label %%while.body%d, label %%while.end%d\n\n",
@@ -1041,7 +1040,6 @@ static void llvm_strings(const struct item* item){
           if(!strcmp(symbol_to_str(stmt->exp->fn_call.id),"prints")){
             exp = stmt->exp->fn_call.exps->data;
             if (exp->kind == EXP_STR){
-              //@.str = private unnamed_addr constant [3 x i8] c"%s\00", align 1
               printf("@.str%d = private unnamed_addr constant [%u x i8] c\"%s\\00\", align 1\n",
                      i,
                      (unsigned)strlen(exp->str) + 1,
@@ -1058,7 +1056,6 @@ static void llvm_strings(const struct item* item){
       if(!strcmp(symbol_to_str(exp->block.exp->fn_call.id),"prints")){
         exp = exp->block.exp->fn_call.exps->data;
         if (exp->kind == EXP_STR){
-          //@.str = private unnamed_addr constant [3 x i8] c"%s\00", align 1
           printf("@.str%d = private unnamed_addr constant [%u x i8] c\"%s\\00\", align 1\n",
                  i,
                  (unsigned)strlen(exp->str) + 1,
