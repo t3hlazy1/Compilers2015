@@ -838,7 +838,7 @@ void llvm_exp(const struct exp* exp){
 
       printf("  %%r%d = call i32 (i8*, ...)* @printi(i8* getelementptr inbounds ([3 x i8]* @.str, i32 0, i32 0), i32 %%r%d) #1\n", last_register);
 	}else if(num_to_print != 0){
-	printf("  %%r%d = call i32 (i8*, ...)* @printi(i8* getelementptr inbounds ([3 x i8]* @.str, i32 0, i32 0), i32 %d) #1\n", num_to_print);
+	printf("  %%r%d = call i32 (i8*, ...)* @printi(i8* getelementptr inbounds ([3 x i8]* @.str, i32 0, i32 0), i32 %d) #1\n", last_register, num_to_print);
 
 	}
 
