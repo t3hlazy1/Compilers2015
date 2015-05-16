@@ -1,14 +1,12 @@
-fn pow(x : i32, mut n : i32) -> i32 {
-      let mut z = 1;
-      while (n > 0) {
-            z = z * x;
-            n -= 1;
-      };
-      return z;
+fn fib(n : i32) -> i32 {
+      if (n < 1) { return 1; }
+      else { return fib(n - 2) + fib(n - 1); };
 }
 
 fn main() {
-      printi(pow(2, 10));
-      printi(pow(3, 4));
-      printi(pow(20, 2));
+      let mut n = 0;
+      while (n < 8) {
+            printi(fib(n));
+            n += 1;
+      };
 }

@@ -1148,8 +1148,12 @@ static void llvm_stmt(const struct stmt* stmt){
       
       break;
     case STMT_RETURN:
-      llvm_exp(stmt->exp);
-      printf("  ret %s %%%d\n", llvm_get_type(last_type), last_register);
+      if (stmt->exp->kind != EXP_I32){
+        llvm_exp(stmt->exp);
+        printf("  ret %s %%%d\n", llvm_get_type(last_type), last_register);
+      }else{
+        printf("  ret i32 %d\n", stmt->exp->num); 
+      }
       break;
     case STMT_EXP:
       llvm_exp(stmt->exp);
