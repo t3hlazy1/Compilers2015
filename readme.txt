@@ -1,15 +1,18 @@
-Compilers
-Assignment 5 - Checkpoint
-2015-05-04
+Project: 
+	University of Missouri - Columbia: Compilers Assignment 4 Part 2
 
-Group members:
-  Quinton D Miller
-  Jack Boening
-  
-Using Babbage's x86 assembly
+Collaborators: 
+	Quinton Miller 
+	Jack Boening
 
-Build instructions:
-  make
-  ./pa4 < test.rs > test.s
-  gcc test.s
-  ./a.out
+Tools Used: 
+	LLVM v3.6.0
+	Clang (part of LLVM)
+	C Programming Language
+
+How To Run/Use: 
+	CD into directory of files
+	Run 'make' 
+	Run ./pa4 < <input_file>.rs > <file>.ll
+	clang <file>.ll
+	./a.out OR run a.exe directly
