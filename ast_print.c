@@ -826,6 +826,8 @@ void llvm_exp(const struct exp* exp){
       for(p = exp->fn_call.exps; p; p = p->next){
         struct exp* expression = p->data;
 
+	printf("%c\n", expression->unary.op);
+
 	      if(expression->kind == EXP_I32){
 		      num_to_print = expression->num; 
         }
@@ -854,17 +856,46 @@ void llvm_exp(const struct exp* exp){
 
 		}
 	}else{
-
-            printf("  %%r%d = call %s @%s(", last_register, llvm_get_type(exp->type), symbol_to_str(exp->fn_call.id));
+	    
+	    int args[10]; 
+	    int i = 0; 
             for(p = exp->fn_call.exps; p; p = p->next){
             struct exp* expression = p->data; 
-      
-                    printf("%s %d", llvm_get_type(expression->type), expression->num); 
+     		
+		if(expression->kind != EXP_I32){
+			llvm_exp(expression);
+			args[i] = -1*last_register;
+			i++; 
+		}else{
+			args[i] = expression->num; 
+			i++;
+		}
+		
+	} 
 
-            if(p->next){
-            printf(", ");
-            }     
-                }
+	    last_register++;	
+	    printf("  %%r%d = call %s @%s(", last_register, llvm_get_type(exp->type), symbol_to_str(exp->fn_call.id));
+
+	//second loop
+	
+	   i = 0; 
+	   for(p = exp->fn_call.exps; p; p = p->next){
+		struct exp* expression = p->data; 
+		
+		if(args[i] < 0){
+			printf("  %s %%r%d", llvm_get_type(expression->type), args[i]*-1);
+			i++;
+		}else{
+			printf("i32 %d", args[i]);
+			i++;
+		}
+
+		if(p->next){
+			printf(", ");
+		}
+	}
+	printf(")");
+	printf("\n");
       }   
       return;
       break;
@@ -1058,7 +1089,6 @@ void llvm_exp(const struct exp* exp){
         if (exp->binary.left->kind != EXP_I32){
           llvm_exp(exp->binary.left);
           l = last_register;
-          last_register++;
         }
 
 	
@@ -1109,22 +1139,15 @@ static void llvm_stmt(const struct stmt* stmt){
         
       if (stmt->let.exp){
         
-        if (stmt->let.exp->kind != EXP_I32){
-          llvm_exp(stmt->let.exp);
-          printf("  store %s %%r%d, %s* %%%s, align 4\n", llvm_get_type(t), last_register, llvm_get_type(t), symbol_to_str(stmt->let.pat->bind.id));
-        }else{
-          printf("  store i32 %d, i32* %%%s, align 4\n", last_register, symbol_to_str(stmt->let.pat->bind.id)); 
-        }
+        llvm_exp(stmt->let.exp);
+        printf("  store %s %%r%d, %s* %%%s, align 4\n", llvm_get_type(t), last_register, llvm_get_type(t), symbol_to_str(stmt->let.pat->bind.id));
+        
       }
       
       break;
     case STMT_RETURN:
-      if (stmt->exp->kind != EXP_I32){
-        llvm_exp(stmt->exp);
-        printf("  ret %s %%%d\n", llvm_get_type(last_type), last_register);
-      }else{
-        printf("  ret i32 %d\n", stmt->exp->num);  
-      }
+      llvm_exp(stmt->exp);
+      printf("  ret %s %%%d\n", llvm_get_type(last_type), last_register);
       break;
     case STMT_EXP:
       llvm_exp(stmt->exp);
