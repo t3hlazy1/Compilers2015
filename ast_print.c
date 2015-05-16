@@ -1136,8 +1136,12 @@ static void llvm_stmt(const struct stmt* stmt){
         
       if (stmt->let.exp){
         
-        llvm_exp(stmt->let.exp);
-        printf("  store %s %%r%d, %s* %%%s, align 4\n", llvm_get_type(t), last_register, llvm_get_type(t), symbol_to_str(stmt->let.pat->bind.id));
+        if (stmt->let.exp->kind != EXP_I32){
+          llvm_exp(stmt->let.exp);
+          printf("  store %s %%r%d, %s* %%%s, align 4\n", llvm_get_type(t), last_register, llvm_get_type(t), symbol_to_str(stmt->let.pat->bind.id));
+        }else{
+          printf("  store i32 %d, i32* %%s, align 5\n", stmt->let.exp->num, symbol_to_str(stmt->let.pat->bind.id)); 
+        }
         
       }
       
