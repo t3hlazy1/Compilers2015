@@ -824,14 +824,15 @@ void llvm_exp(const struct exp* exp){
       if (!strcmp(symbol_to_str(exp->fn_call.id), "printi")){
       //get parameter list and type
       for(p = exp->fn_call.exps; p; p = p->next){
-            struct exp* expression = p->data;
+        struct exp* expression = p->data;
 
-	    if(expression->kind == EXP_I32){
-		num_to_print = expression->num; 
-	}else{
- 
-            llvm_exp(expression);
-	}        
+	      if(expression->kind == EXP_I32){
+		      num_to_print = expression->num; 
+        }
+        else{
+          llvm_exp(expression);
+          last_register++;
+	      }        
       }
             
 	if(num_to_print == 0){
@@ -1008,7 +1009,7 @@ void llvm_exp(const struct exp* exp){
         // Do left expression
         if (exp->binary.left->kind != EXP_I32){
           llvm_exp(exp->binary.left);
-          l = last_register;
+          l = last_register++;
         }
 
         // Do right expression
