@@ -633,6 +633,10 @@ void llvm_item(const struct item* item){
 
       llvm_exp(item->fn_def.block);
       
+      // If main
+      if (!strcmp(symbol_to_str(item->id), "main"))
+        printf("  ret i32 0\n");
+      
       printf("}\n\n");
       break;
     }
