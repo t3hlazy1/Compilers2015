@@ -17,8 +17,8 @@ void parse_done(GList* items) {
       crate = items;
 }
 
-void yyerror(char const* s) {
-      fprintf(stderr, "%s\n", s);
+void yyerror(char *s) {
+      printf("Line %d: %s\n", yylineno, s);
 }
 
 static struct env* build_env(GList* crate) {
@@ -103,7 +103,19 @@ static struct env* build_env(GList* crate) {
                   }
             }
       }
-
+       // Adds types for builtin prints() and printi() functions.
+       // TODO: leak, some malloc'd data is only accessible via the env (as
+       // opposed to the AST), and won't get free'd.
+       env_insert(env, symbol_var(strdup("prints")), type_fn(
+                   g_list_append(NULL, GINT_TO_POINTER(
+                         param(pat_id(false, false, symbol_var(strdup("msg"))),
+                               type_ref(type_slice(type_u8()))))),
+                   type_unit()));
+       env_insert(env, symbol_var(strdup("printi")), type_fn(
+                   g_list_append(NULL, GINT_TO_POINTER(
+                         param(pat_id(false, false, symbol_var(strdup("msg"))),
+                               type_i32()))),
+                   type_unit()));
       return env;
 }
 
@@ -112,7 +124,7 @@ static void check_main(struct env* env) {
 
       if (main_decl->kind == TYPE_FN) {
             if (main_decl->params // it has params...
-            || (main_decl->type && main_decl->type->kind != TYPE_UNIT)) { // ...or a non-unit return type.
+            || (main_decl->type && main_decl->type != type_unit())) { // ...or a non-unit return type.
                   printf("Error: main function has the wrong type.\n");
                   exit(1);
             }
@@ -208,8 +220,8 @@ static void annotate_exp(struct exp* exp, struct env* env) {
                   // If the lengths are different...
                   if (p || a) exp->type = type_error();
               
-                  if (!strcmp(symbol_to_str(exp->fn_call.id), "prints") || !strcmp(symbol_to_str(exp->fn_call.id), "printi"))
-                    exp->type = type_unit();
+                  //if (!strcmp(symbol_to_str(exp->fn_call.id), "prints") || !strcmp(symbol_to_str(exp->fn_call.id), "printi"))
+                    //exp->type = type_unit();
                   // If we haven't already set our type to error, then our type
                   // must be the function return type.
                   else if (exp->type == type_invalid())
@@ -338,7 +350,9 @@ static void annotate_exp(struct exp* exp, struct env* env) {
                                     || type_is_box(exp->unary.exp->type))) {
                         exp->type = type_copy(type_get_elem(exp->unary.exp->type));
                   }
-
+                  if (exp_is_arith(exp) && type_is_i32(exp->unary.exp->type)) {
+                    exp->type = type_i32();
+                  }
                   break;
             }
       }
@@ -357,7 +371,11 @@ static void annotate_stmt(struct stmt* stmt, struct env* env) {
                         } else {
                               // TODO (leak)
                               if (stmt->let.pat->bind.mut) {
-                                    env_insert(env, stmt->let.pat->bind.id, type_mut(stmt->let.exp->type));
+                                if (type_is_mut(stmt->let.exp->type)) {
+                                  env_insert(env, stmt->let.pat->bind.id, stmt->let.exp->type);
+                                } else {
+                                  env_insert(env, stmt->let.pat->bind.id, type_mut(stmt->let.exp->type));
+                                }
                               } else env_insert(env, stmt->let.pat->bind.id, stmt->let.exp->type);
                               stmt->type = type_unit();
                         }
@@ -374,7 +392,7 @@ static void annotate_stmt(struct stmt* stmt, struct env* env) {
             case STMT_RETURN: {
                   annotate_exp(stmt->exp, env);
                   struct type* expected = env_lookup(env, symbol_return());
-                  if (expected->kind == stmt->exp->type->kind) {
+                  if (type_eq(expected, stmt->exp->type)) {
                         stmt->type = type_unit();
                   } else stmt->type = type_error();
                   break;
@@ -400,7 +418,10 @@ static void annotate_item(struct item* item, struct env* env) {
                   env_insert(lenv, symbol_return(), item->fn_def.type->type);
                   for (GList* p = item->fn_def.type->params; p; p = p->next) {
                         struct pair* param = p->data;
-                        env_insert(lenv, param->param.pat->bind.id, param->param.type);
+                         // TODO (leak)
+                         if (param->param.pat->bind.mut) {
+                               env_insert(lenv, param->param.pat->bind.id, type_mut(param->param.type));
+                         } else env_insert(lenv, param->param.pat->bind.id, param->param.type);
                   }
                   annotate_exp(item->fn_def.block, lenv);
                   env_destroy(lenv);
