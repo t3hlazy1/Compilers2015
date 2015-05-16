@@ -698,7 +698,7 @@ const char* llvm_get_type(const struct type* type){
   
   switch (type->kind){
     case TYPE_INVALID:
-      return "inv";
+      return "i32";
       break;
     case TYPE_ERROR:
       return "err";
@@ -837,9 +837,9 @@ void llvm_exp(const struct exp* exp){
             
 	if(num_to_print == 0){
 
-      printf("  %%r%d = call i32 (i8*, ...)* @printi(i8* getelementptr inbounds ([3 x i8]* @.str, i32 0, i32 0), i32 %%r%d) #1\n", last_register);
+      printf("  %%r%d = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @.str1, i32 0, i32 0), i32 %%r%d) #1\n", last_register, last_register-1);
 	}else if(num_to_print != 0){
-	printf("  %%r%d = call i32 (i8*, ...)* @printi(i8* getelementptr inbounds ([3 x i8]* @.str, i32 0, i32 0), i32 %d) #1\n", last_register, num_to_print);
+	printf("  %%r%d = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @.str1, i32 0, i32 0), i32 %d) #1\n", last_register, num_to_print);
 
 	}
 
@@ -849,7 +849,7 @@ void llvm_exp(const struct exp* exp){
 			int len = strlen(expression->str);
 			//printf("%d\n", len);
 			
-			printf("  %%r%d = call i32 (i8*, ...)* @prints(i8* getelementptr inbounds ([%d x i8]* @.str%d, i32 0, i32 0)) #1\n", last_register,len+1,last_string);
+			printf("  %%r%d = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([%d x i8]* @.str%d, i32 0, i32 0)) #1\n", last_register,len+1,last_string);
 			last_string++;
 
 		}
@@ -1059,6 +1059,8 @@ void llvm_exp(const struct exp* exp){
           llvm_exp(exp->binary.left);
           l = last_register;
         }
+
+	
 
         // Do right expression
         if (exp->binary.right->kind != EXP_I32){
