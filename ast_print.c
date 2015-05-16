@@ -1058,6 +1058,7 @@ void llvm_exp(const struct exp* exp){
         if (exp->binary.left->kind != EXP_I32){
           llvm_exp(exp->binary.left);
           l = last_register;
+          last_register++;
         }
 
 	
@@ -1108,15 +1109,22 @@ static void llvm_stmt(const struct stmt* stmt){
         
       if (stmt->let.exp){
         
-        llvm_exp(stmt->let.exp);
-        printf("  store %s %%r%d, %s* %%%s, align 4\n", llvm_get_type(t), last_register, llvm_get_type(t), symbol_to_str(stmt->let.pat->bind.id));
-        
+        if (stmt->let.exp->kind != EXP_I32){
+          llvm_exp(stmt->let.exp);
+          printf("  store %s %%r%d, %s* %%%s, align 4\n", llvm_get_type(t), last_register, llvm_get_type(t), symbol_to_str(stmt->let.pat->bind.id));
+        }else{
+          printf("  store i32 %d, i32* %%%s, align 4\n", last_register, symbol_to_str(stmt->let.pat->bind.id)); 
+        }
       }
       
       break;
     case STMT_RETURN:
-      llvm_exp(stmt->exp);
-      printf("  ret %s %%%d\n", llvm_get_type(last_type), last_register);
+      if (stmt->exp->kind != EXP_I32){
+        llvm_exp(stmt->exp);
+        printf("  ret %s %%%d\n", llvm_get_type(last_type), last_register);
+      }else{
+        printf("  ret i32 %d\n", stmt->exp->num);  
+      }
       break;
     case STMT_EXP:
       llvm_exp(stmt->exp);
