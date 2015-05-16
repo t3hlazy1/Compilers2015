@@ -826,8 +826,6 @@ void llvm_exp(const struct exp* exp){
       for(p = exp->fn_call.exps; p; p = p->next){
         struct exp* expression = p->data;
 
-	printf("%c\n", expression->unary.op);
-
 	      if(expression->kind == EXP_I32){
 		      num_to_print = expression->num; 
         }
@@ -894,8 +892,7 @@ void llvm_exp(const struct exp* exp){
 			printf(", ");
 		}
 	}
-	printf(")");
-	printf("\n");
+	printf(")\n");
       }   
       return;
       break;
