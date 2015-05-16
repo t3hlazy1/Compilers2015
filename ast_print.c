@@ -22,7 +22,6 @@ static void pair_print(const struct pair*);
 static void type_print(const struct type*);
 
 static void llvm_stmt(const struct stmt* stmt);
-static void llvm_binary(const struct exp* exp, int leg);
 void llvm_item(const struct item*);
 void llvm_exp(const struct exp*);
 const char* llvm_get_type(const struct type* type);
@@ -692,6 +691,8 @@ const char* llvm_op_to_str(const char* op){
   if (!strcmp(op, "<=")) return "sle";
   if (!strcmp(op, ">")) return "sgt";
   if (!strcmp(op, ">=")) return "sge";
+  
+  return "err";
 }
 
 const char* llvm_get_type(const struct type* type){
@@ -1140,7 +1141,7 @@ static void llvm_stmt(const struct stmt* stmt){
           llvm_exp(stmt->let.exp);
           printf("  store %s %%r%d, %s* %%%s, align 4\n", llvm_get_type(t), last_register, llvm_get_type(t), symbol_to_str(stmt->let.pat->bind.id));
         }else{
-          printf("  store i32 %d, i32* %%s, align 5\n", stmt->let.exp->num, symbol_to_str(stmt->let.pat->bind.id)); 
+          printf("  store i32 %d, i32* %%%s, align 5\n", stmt->let.exp->num, symbol_to_str(stmt->let.pat->bind.id)); 
         }
         
       }
